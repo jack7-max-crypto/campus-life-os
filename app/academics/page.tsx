@@ -8,9 +8,7 @@ import {
   calculatePriorityScore,
   explainNeededScore,
   formatAssignmentScore,
-  formatDate,
   formatPercent,
-  getNeededScoreState,
   priorityLabel,
   statusLabel,
   toLetterGrade,
@@ -20,18 +18,6 @@ const statusClasses: Record<string, string> = {
   completed: "bg-emerald-100 text-emerald-800",
   "in-progress": "bg-amber-100 text-amber-800",
   "not-started": "bg-slate-200 text-slate-700",
-};
-
-const neededStateClasses: Record<string, string> = {
-  secured: "bg-emerald-100 text-emerald-800",
-  possible: "bg-blue-100 text-blue-800",
-  impossible: "bg-rose-100 text-rose-800",
-};
-
-const priorityClasses: Record<string, string> = {
-  High: "bg-rose-100 text-rose-700",
-  Medium: "bg-amber-100 text-amber-700",
-  Low: "bg-emerald-100 text-emerald-700",
 };
 
 export default function AcademicsPage() {
@@ -47,9 +33,6 @@ export default function AcademicsPage() {
     () => (selectedCourse ? calculateCourseMetrics(selectedCourse) : null),
     [selectedCourse],
   );
-
-  const remainingState = metrics ? getNeededScoreState(metrics.neededOnRemaining) : "possible";
-  const finalState = metrics ? getNeededScoreState(metrics.neededOnFinal) : "possible";
 
   const coursePriorities = useMemo(() => {
     return [...mockCourses]
@@ -133,17 +116,11 @@ export default function AcademicsPage() {
 
         <Card title="Class priority ranking" subtitle="Computed from risk + urgency">
           {coursePriorities.map((item) => (
-            <div key={item.course.id} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
-              <div className="flex items-center gap-2">
-                <span
-                  className={`rounded-full px-2 py-0.5 text-xs font-semibold ${priorityClasses[item.label]}`}
-                >
-                  {item.label}
-                </span>
-                <span className="text-sm text-slate-700">{item.course.name}</span>
-              </div>
-              <span className="text-sm font-semibold text-slate-900">{item.score}</span>
-            </div>
+            <MetricRow
+              key={item.course.id}
+              label={`${item.label} • ${item.course.name}`}
+              value={`${item.score}`}
+            />
           ))}
         </Card>
 
@@ -165,11 +142,6 @@ export default function AcademicsPage() {
           <p className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-700">
             {explainNeededScore(metrics.neededOnRemaining)}
           </p>
-          <span
-            className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${neededStateClasses[remainingState]}`}
-          >
-            {remainingState.toUpperCase()}
-          </span>
         </Card>
 
         <Card title="Final exam calculator" subtitle="Needed on final exam only">
@@ -181,9 +153,6 @@ export default function AcademicsPage() {
           <p className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-700">
             {explainNeededScore(metrics.neededOnFinal)}
           </p>
-          <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${neededStateClasses[finalState]}`}>
-            {finalState.toUpperCase()}
-          </span>
         </Card>
       </section>
 
@@ -233,7 +202,7 @@ export default function AcademicsPage() {
                     <td className="px-2 py-2">{courseName}</td>
                     <td className="px-2 py-2">{assignment.category}</td>
                     <td className="px-2 py-2">{formatAssignmentScore(assignment)}</td>
-                    <td className="px-2 py-2">{formatDate(assignment.dueDate)}</td>
+                    <td className="px-2 py-2">{assignment.dueDate}</td>
                     <td className="px-2 py-2">
                       <span
                         className={`rounded-full px-2 py-1 text-xs font-semibold ${

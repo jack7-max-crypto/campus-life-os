@@ -16,8 +16,6 @@ export type CourseMetrics = {
   finalExamWeight: number;
 };
 
-export type NeededScoreState = "secured" | "possible" | "impossible";
-
 function round(value: number, decimals = 2) {
   const factor = 10 ** decimals;
   return Math.round(value * factor) / factor;
@@ -25,14 +23,6 @@ function round(value: number, decimals = 2) {
 
 export function formatPercent(value: number) {
   return `${round(value, 1).toFixed(1)}%`;
-}
-
-export function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(`${value}T12:00:00`));
 }
 
 export function toLetterGrade(score: number) {
@@ -101,6 +91,7 @@ export function calculateCourseMetrics(course: Course): CourseMetrics {
 
   const remainingWeight = Math.max(0, 100 - completedWeight);
   const currentGrade = completedWeight > 0 ? (currentPoints / completedWeight) * 100 : 0;
+
   const overallAverage = completedWeight > 0 ? currentPoints / completedWeight : 0;
 
   let projectedPoints = currentPoints;
@@ -109,6 +100,8 @@ export function calculateCourseMetrics(course: Course): CourseMetrics {
       projectedPoints += overallAverage * category.weight;
     }
   }
+
+  const projectedGrade = projectedPoints;
 
   const neededOnRemainingRaw =
     remainingWeight > 0 ? ((course.targetGrade - currentPoints) / remainingWeight) * 100 : 0;
@@ -127,23 +120,16 @@ export function calculateCourseMetrics(course: Course): CourseMetrics {
     currentPoints: round(currentPoints),
     completedWeight: round(completedWeight),
     remainingWeight: round(remainingWeight),
-    projectedGrade: round(projectedPoints),
+    projectedGrade: round(projectedGrade),
     neededOnRemaining: round(neededOnRemainingRaw),
     neededOnFinal: round(neededOnFinalRaw),
     finalExamWeight: course.finalExamWeight,
   };
 }
 
-export function getNeededScoreState(value: number): NeededScoreState {
-  if (value <= 0) return "secured";
-  if (value > 100) return "impossible";
-  return "possible";
-}
-
 export function explainNeededScore(value: number) {
-  const state = getNeededScoreState(value);
-  if (state === "secured") return "Target already secured based on current performance.";
-  if (state === "impossible") return "Target is currently impossible without extra credit.";
+  if (value <= 0) return "Target already secured based on current performance.";
+  if (value > 100) return "Target is currently impossible without extra credit.";
   return `Need ${formatPercent(value)} on this component to reach target.`;
 }
 
@@ -181,10 +167,7 @@ export function formatAssignmentScore(assignment: Assignment) {
   if (assignment.scoreEarned === null || assignment.scorePossible === null) {
     return "—";
   }
-  const percent =
-    assignment.scorePossible > 0
-      ? (assignment.scoreEarned / assignment.scorePossible) * 100
-      : 0;
+  const percent = assignment.scorePossible > 0 ? (assignment.scoreEarned / assignment.scorePossible) * 100 : 0;
   return `${assignment.scoreEarned}/${assignment.scorePossible} (${formatPercent(percent)})`;
 }
 
