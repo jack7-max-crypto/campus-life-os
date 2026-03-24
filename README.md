@@ -39,11 +39,6 @@ components/
     sidebar.tsx
   ui/
     card.tsx
-lib/
-  academics/
-    mockData.ts
-    types.ts
-    utils.ts
 ```
 
 ## Getting started
