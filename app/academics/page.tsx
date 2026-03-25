@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Card, MetricRow } from "@/components/ui/card";
-import { ACTIVE_SEED_PROFILE, getSeedCourses } from "@/lib/academics/mockData";
+import { mockCourses } from "@/lib/academics/mockData";
 import { Assignment, AssignmentStatus, Course } from "@/lib/academics/types";
 import {
   calculateCourseMetrics,
@@ -39,10 +39,7 @@ const neededStateClasses: Record<string, string> = {
   impossible: "bg-rose-100 text-rose-800 border-rose-200",
 };
 
-
 const ACADEMICS_STORAGE_KEY = "campus-life-os.academics.v1";
-const seedCourses = getSeedCourses(ACTIVE_SEED_PROFILE);
-const demoSeedCourses = getSeedCourses("demo");
 
 const priorityClasses: Record<string, string> = {
   High: "bg-rose-100 text-rose-700",
@@ -62,9 +59,9 @@ function createEmptyDraft(defaultCategory: string): AssignmentDraft {
 }
 
 export default function AcademicsPage() {
-  const [courses, setCourses] = useState<Course[]>(seedCourses);
+  const [courses, setCourses] = useState<Course[]>(mockCourses);
   const [hasHydrated, setHasHydrated] = useState(false);
-  const [selectedCourseId, setSelectedCourseId] = useState(seedCourses[0]?.id ?? "");
+  const [selectedCourseId, setSelectedCourseId] = useState(mockCourses[0]?.id ?? "");
   const [assignmentCourseFilter, setAssignmentCourseFilter] = useState<string>("all");
   const [draft, setDraft] = useState<AssignmentDraft | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -214,8 +211,8 @@ export default function AcademicsPage() {
   };
 
   const resetDemoData = () => {
-    setCourses(demoSeedCourses);
-    setSelectedCourseId(demoSeedCourses[0]?.id ?? "");
+    setCourses(mockCourses);
+    setSelectedCourseId(mockCourses[0]?.id ?? "");
     setAssignmentCourseFilter("all");
     closeDraft();
     window.localStorage.removeItem(ACADEMICS_STORAGE_KEY);

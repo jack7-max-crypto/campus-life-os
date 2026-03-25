@@ -1,32 +1,6 @@
 import { Course } from "./types";
 
-export type SeedProfile = "demo" | "personal";
-
-/**
- * ============================================================================
- * HOW TO CUSTOMIZE YOUR ACADEMICS SEED DATA
- * ============================================================================
- * 1) Edit `personalCourses` below with your real classes.
- * 2) Keep category weights per course summing to 100.
- * 3) Set ACTIVE_SEED_PROFILE to "personal".
- * 4) In the app, click "Reset demo data" only when you want to restore demo data.
- *
- * Assignment status options:
- * - "not-started"
- * - "in-progress"
- * - "completed"
- *
- * scoreEarned / scorePossible:
- * - Use numbers when graded (e.g. 42 / 50)
- * - Use null when not graded yet
- * ============================================================================
- */
-export const ACTIVE_SEED_PROFILE: SeedProfile = "personal";
-
-/**
- * Demo data used for product walkthroughs and the "Reset demo data" action.
- */
-export const demoCourses: Course[] = [
+export const mockCourses: Course[] = [
   {
     id: "organic-chem",
     name: "Organic Chemistry",
@@ -58,6 +32,26 @@ export const demoCourses: Course[] = [
         dueDate: "2026-03-27",
         status: "in-progress",
         scoreEarned: null,
+        scorePossible: 100,
+      },
+      {
+        id: "org-quiz-5",
+        courseId: "organic-chem",
+        name: "Mechanisms Quiz",
+        category: "Quizzes",
+        dueDate: "2026-03-16",
+        status: "completed",
+        scoreEarned: 15,
+        scorePossible: 20,
+      },
+      {
+        id: "org-midterm-1",
+        courseId: "organic-chem",
+        name: "Midterm I",
+        category: "Midterm",
+        dueDate: "2026-03-10",
+        status: "completed",
+        scoreEarned: 78,
         scorePossible: 100,
       },
       {
@@ -106,6 +100,26 @@ export const demoCourses: Course[] = [
         scorePossible: 100,
       },
       {
+        id: "ds-quiz-4",
+        courseId: "data-structures",
+        name: "Complexity Quiz",
+        category: "Quizzes",
+        dueDate: "2026-03-14",
+        status: "completed",
+        scoreEarned: 18,
+        scorePossible: 20,
+      },
+      {
+        id: "ds-midterm",
+        courseId: "data-structures",
+        name: "Midterm",
+        category: "Midterm",
+        dueDate: "2026-03-05",
+        status: "completed",
+        scoreEarned: 87,
+        scorePossible: 100,
+      },
+      {
         id: "ds-final",
         courseId: "data-structures",
         name: "Final Exam",
@@ -117,98 +131,65 @@ export const demoCourses: Course[] = [
       },
     ],
   },
-];
-
-/**
- * Personal real-data template.
- *
- * Replace these with your own classes. Keep each course's categories +
- * assignments aligned by category names.
- */
-export const personalCourses: Course[] = [
   {
-    id: "cs-350",
-    name: "Software Engineering",
+    id: "statistics-ii",
+    name: "Statistics II",
     credits: 3,
-    targetGrade: 92,
-    finalExamWeight: 30,
-    categories: [
-      { name: "Projects", weight: 45 },
-      { name: "Quizzes", weight: 15 },
-      { name: "Participation", weight: 10 },
-      { name: "Final Exam", weight: 30 },
-    ],
-    assignments: [
-      {
-        id: "cs350-p1",
-        courseId: "cs-350",
-        name: "Project 1: API Service",
-        category: "Projects",
-        dueDate: "2026-03-29",
-        status: "completed",
-        scoreEarned: 94,
-        scorePossible: 100,
-      },
-      {
-        id: "cs350-q4",
-        courseId: "cs-350",
-        name: "Quiz 4",
-        category: "Quizzes",
-        dueDate: "2026-04-02",
-        status: "in-progress",
-        scoreEarned: null,
-        scorePossible: 20,
-      },
-      {
-        id: "cs350-final",
-        courseId: "cs-350",
-        name: "Final Exam",
-        category: "Final Exam",
-        dueDate: "2026-05-08",
-        status: "not-started",
-        scoreEarned: null,
-        scorePossible: 100,
-      },
-    ],
-  },
-  {
-    id: "math-241",
-    name: "Linear Algebra",
-    credits: 4,
     targetGrade: 88,
     finalExamWeight: 35,
     categories: [
-      { name: "Homework", weight: 30 },
-      { name: "Midterm", weight: 35 },
+      { name: "Homework", weight: 25 },
+      { name: "Labs", weight: 15 },
+      { name: "Tests", weight: 25 },
       { name: "Final Exam", weight: 35 },
     ],
     assignments: [
       {
-        id: "math241-hw7",
-        courseId: "math-241",
-        name: "Homework 7",
+        id: "stats-hw-6",
+        courseId: "statistics-ii",
+        name: "Regression Homework",
         category: "Homework",
-        dueDate: "2026-03-30",
+        dueDate: "2026-03-15",
         status: "completed",
-        scoreEarned: 27,
-        scorePossible: 30,
+        scoreEarned: 41,
+        scorePossible: 50,
       },
       {
-        id: "math241-midterm",
-        courseId: "math-241",
-        name: "Midterm",
-        category: "Midterm",
-        dueDate: "2026-04-12",
-        status: "not-started",
+        id: "stats-hw-7",
+        courseId: "statistics-ii",
+        name: "Bayes Practice",
+        category: "Homework",
+        dueDate: "2026-03-28",
+        status: "in-progress",
         scoreEarned: null,
+        scorePossible: 50,
+      },
+      {
+        id: "stats-lab-3",
+        courseId: "statistics-ii",
+        name: "R Lab 3",
+        category: "Labs",
+        dueDate: "2026-03-22",
+        status: "completed",
+        scoreEarned: 17,
+        scorePossible: 20,
+      },
+      {
+        id: "stats-test-1",
+        courseId: "statistics-ii",
+        name: "Unit Test 1",
+        category: "Tests",
+        dueDate: "2026-03-08",
+        status: "completed",
+        scoreEarned: 76,
         scorePossible: 100,
       },
       {
-        id: "math241-final",
-        courseId: "math-241",
+        id: "stats-final",
+        courseId: "statistics-ii",
         name: "Final Exam",
         category: "Final Exam",
-        dueDate: "2026-05-15",
+        dueDate: "2026-05-14",
         status: "not-started",
         scoreEarned: null,
         scorePossible: 100,
@@ -216,31 +197,3 @@ export const personalCourses: Course[] = [
     ],
   },
 ];
-
-export const seedProfiles: Record<
-  SeedProfile,
-  {
-    label: string;
-    courses: Course[];
-  }
-> = {
-  demo: {
-    label: "Demo",
-    courses: demoCourses,
-  },
-  personal: {
-    label: "Personal",
-    courses: personalCourses,
-  },
-};
-
-function cloneCourses(courses: Course[]) {
-  return JSON.parse(JSON.stringify(courses)) as Course[];
-}
-
-export function getSeedCourses(profile: SeedProfile = ACTIVE_SEED_PROFILE): Course[] {
-  return cloneCourses(seedProfiles[profile].courses);
-}
-
-// Backward-compatible export used in existing UI imports.
-export const mockCourses = getSeedCourses();
