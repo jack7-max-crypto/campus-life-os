@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, MetricRow } from "@/components/ui/card";
 import { mockCourses } from "@/lib/academics/mockData";
-import { Assignment, AssignmentStatus, Course } from "@/lib/academics/types";
+import { Assignment, AssignmentStatus } from "@/lib/academics/types";
 import {
   calculateCourseMetrics,
   calculatePriorityScore,
@@ -39,9 +39,6 @@ const neededStateClasses: Record<string, string> = {
   impossible: "bg-rose-100 text-rose-800 border-rose-200",
 };
 
-
-const ACADEMICS_STORAGE_KEY = "campus-life-os.academics.v1";
-
 const priorityClasses: Record<string, string> = {
   High: "bg-rose-100 text-rose-700",
   Medium: "bg-amber-100 text-amber-700",
@@ -60,8 +57,7 @@ function createEmptyDraft(defaultCategory: string): AssignmentDraft {
 }
 
 export default function AcademicsPage() {
-  const [courses, setCourses] = useState<Course[]>(mockCourses);
-  const [hasHydrated, setHasHydrated] = useState(false);
+  const [courses, setCourses] = useState(mockCourses);
   const [selectedCourseId, setSelectedCourseId] = useState(mockCourses[0]?.id ?? "");
   const [assignmentCourseFilter, setAssignmentCourseFilter] = useState<string>("all");
   const [draft, setDraft] = useState<AssignmentDraft | null>(null);
@@ -101,30 +97,6 @@ export default function AcademicsPage() {
     }
     return allAssignments.filter((assignment) => assignment.courseId === assignmentCourseFilter);
   }, [allAssignments, assignmentCourseFilter]);
-
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(ACADEMICS_STORAGE_KEY);
-      if (!raw) {
-        setHasHydrated(true);
-        return;
-      }
-
-      const parsed = JSON.parse(raw) as Course[];
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        setCourses(parsed);
-      }
-    } catch {
-      // keep mock seed data fallback
-    } finally {
-      setHasHydrated(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!hasHydrated) return;
-    window.localStorage.setItem(ACADEMICS_STORAGE_KEY, JSON.stringify(courses));
-  }, [courses, hasHydrated]);
 
   if (!selectedCourse || !metrics) {
     return null;
@@ -209,14 +181,6 @@ export default function AcademicsPage() {
         course.id === selectedCourse.id ? { ...course, targetGrade: nextTarget } : course,
       ),
     );
-  };
-
-  const resetDemoData = () => {
-    setCourses(mockCourses);
-    setSelectedCourseId(mockCourses[0]?.id ?? "");
-    setAssignmentCourseFilter("all");
-    closeDraft();
-    window.localStorage.removeItem(ACADEMICS_STORAGE_KEY);
   };
 
   const renderNeededValue = (value: number) => {
@@ -368,12 +332,6 @@ export default function AcademicsPage() {
               className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-700"
             >
               Add assignment
-            </button>
-            <button
-              onClick={resetDemoData}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
-            >
-              Reset demo data
             </button>
           </div>
         </div>
