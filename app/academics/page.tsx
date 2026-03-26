@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Card, MetricRow } from "@/components/ui/card";
-import { ACTIVE_SEED_PROFILE, getSeedCourses } from "@/lib/academics/mockData";
+import { mockCourses } from "@/lib/academics/mockData";
 import { Assignment, AssignmentStatus, Course, GradeCategory } from "@/lib/academics/types";
 import {
   calculateCourseMetrics,
@@ -54,8 +54,8 @@ const neededStateClasses: Record<string, string> = {
 };
 
 const ACADEMICS_STORAGE_KEY = "campus-life-os.academics.v1";
-const seedCourses = getSeedCourses(ACTIVE_SEED_PROFILE);
-const demoSeedCourses = getSeedCourses("demo");
+const seedCourses = mockCourses;
+const demoSeedCourses = mockCourses;
 
 const priorityClasses: Record<string, string> = {
   High: "bg-rose-100 text-rose-700",
@@ -114,67 +114,6 @@ function categoryWeightTotal(categories: CategoryDraft[]): number {
   return categories.reduce((sum, category) => sum + (Number(category.weight) || 0), 0);
 }
 
-
-type GpaScaleId = "seven_point" | "ten_point";
-
-type GpaScaleConfig = {
-  label: string;
-  bands: Array<{
-    min: number;
-    gpa: number;
-  }>;
-};
-
-const GPA_SCALES: Record<GpaScaleId, GpaScaleConfig> = {
-  seven_point: {
-    label: "7-point style",
-    bands: [
-      { min: 93, gpa: 4.0 },
-      { min: 85, gpa: 3.0 },
-      { min: 77, gpa: 2.0 },
-      { min: 70, gpa: 1.0 },
-      { min: 0, gpa: 0.0 },
-    ],
-  },
-  ten_point: {
-    label: "10-point style",
-    bands: [
-      { min: 90, gpa: 4.0 },
-      { min: 80, gpa: 3.0 },
-      { min: 70, gpa: 2.0 },
-      { min: 60, gpa: 1.0 },
-      { min: 0, gpa: 0.0 },
-    ],
-  },
-};
-
-function percentageToGpa(grade: number, scaleId: GpaScaleId): number {
-  const scale = GPA_SCALES[scaleId];
-  const band = scale.bands.find((entry) => grade >= entry.min);
-  return band?.gpa ?? 0;
-}
-
-function computeWeightedGpa(
-  courses: Course[],
-  gradeByCourseId: Record<string, number>,
-  scaleId: GpaScaleId,
-): number {
-  const totals = courses.reduce(
-    (acc, course) => {
-      const grade = gradeByCourseId[course.id] ?? 0;
-      const gradePoints = percentageToGpa(grade, scaleId);
-      return {
-        points: acc.points + gradePoints * course.credits,
-        credits: acc.credits + course.credits,
-      };
-    },
-    { points: 0, credits: 0 },
-  );
-
-  if (totals.credits === 0) return 0;
-  return Math.round((totals.points / totals.credits) * 100) / 100;
-}
-
 export default function AcademicsPage() {
   const [courses, setCourses] = useState<Course[]>(seedCourses);
   const [hasHydrated, setHasHydrated] = useState(false);
@@ -185,9 +124,6 @@ export default function AcademicsPage() {
   const [courseDraft, setCourseDraft] = useState<CourseDraft | null>(null);
   const [isEditCourseMode, setIsEditCourseMode] = useState(false);
   const [courseFormError, setCourseFormError] = useState<string | null>(null);
-  const [whatIfCourseId, setWhatIfCourseId] = useState(seedCourses[0]?.id ?? "");
-  const [whatIfGrade, setWhatIfGrade] = useState("85");
-  const [gpaScaleId, setGpaScaleId] = useState<GpaScaleId>("ten_point");
 
   const selectedCourse = useMemo(
     () => courses.find((course) => course.id === selectedCourseId) ?? courses[0],
@@ -214,53 +150,6 @@ export default function AcademicsPage() {
       })
       .sort((a, b) => b.score - a.score);
   }, [courses]);
-
-  const gpaOverview = useMemo(() => {
-    const currentGrades: Record<string, number> = {};
-    const projectedGrades: Record<string, number> = {};
-
-    for (const course of courses) {
-      const courseMetrics = calculateCourseMetrics(course);
-      currentGrades[course.id] = courseMetrics.currentGrade;
-      projectedGrades[course.id] = courseMetrics.projectedGrade;
-    }
-
-    const currentGpa = computeWeightedGpa(courses, currentGrades, gpaScaleId);
-    const projectedGpa = computeWeightedGpa(courses, projectedGrades, gpaScaleId);
-
-    const parsedWhatIf = Number(whatIfGrade);
-    const whatIfGrades = {
-      ...projectedGrades,
-      [whatIfCourseId]: Number.isFinite(parsedWhatIf)
-        ? Math.max(0, Math.min(100, parsedWhatIf))
-        : projectedGrades[whatIfCourseId] ?? 0,
-    };
-    const whatIfProjectedGpa = computeWeightedGpa(courses, whatIfGrades, gpaScaleId);
-
-    const impacts = courses.map((course) => {
-      const baseline = projectedGrades[course.id] ?? 0;
-      const plusTen = Math.min(100, baseline + 10);
-      const minusTen = Math.max(0, baseline - 10);
-      const upside = percentageToGpa(plusTen, gpaScaleId) - percentageToGpa(baseline, gpaScaleId);
-      const downside = percentageToGpa(baseline, gpaScaleId) - percentageToGpa(minusTen, gpaScaleId);
-      return {
-        course,
-        upsideImpact: upside * course.credits,
-        downsideImpact: downside * course.credits,
-      };
-    });
-
-    const bestImpactCourse = [...impacts].sort((a, b) => b.upsideImpact - a.upsideImpact)[0]?.course;
-    const worstImpactCourse = [...impacts].sort((a, b) => b.downsideImpact - a.downsideImpact)[0]?.course;
-
-    return {
-      currentGpa,
-      projectedGpa,
-      whatIfProjectedGpa,
-      bestImpactCourse,
-      worstImpactCourse,
-    };
-  }, [courses, whatIfCourseId, whatIfGrade, gpaScaleId]);
 
   const allAssignments = useMemo(() => courses.flatMap((course) => course.assignments), [courses]);
 
@@ -510,8 +399,6 @@ export default function AcademicsPage() {
     setCourses(demoSeedCourses);
     setSelectedCourseId(demoSeedCourses[0]?.id ?? "");
     setAssignmentCourseFilter("all");
-    setWhatIfCourseId(demoSeedCourses[0]?.id ?? "");
-    setWhatIfGrade("85");
     closeAssignmentDraft();
     closeCourseDraft();
     window.localStorage.removeItem(ACADEMICS_STORAGE_KEY);
@@ -779,67 +666,6 @@ export default function AcademicsPage() {
               <span className="text-sm font-semibold text-slate-900">{item.score}</span>
             </div>
           ))}
-        </Card>
-
-        <Card title="GPA Overview" subtitle="4.0 scale using course credits">
-          <label className="block text-xs text-slate-500">
-            Grading scale
-            <select
-              value={gpaScaleId}
-              onChange={(event) => setGpaScaleId(event.target.value as GpaScaleId)}
-              className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700"
-            >
-              {(Object.keys(GPA_SCALES) as GpaScaleId[]).map((scaleId) => (
-                <option key={scaleId} value={scaleId}>
-                  {GPA_SCALES[scaleId].label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <MetricRow label="Current GPA" value={gpaOverview.currentGpa.toFixed(2)} />
-          <MetricRow label="Projected GPA" value={gpaOverview.projectedGpa.toFixed(2)} />
-          <MetricRow
-            label="What-if GPA"
-            value={gpaOverview.whatIfProjectedGpa.toFixed(2)}
-          />
-          <MetricRow
-            label="Best impact course"
-            value={gpaOverview.bestImpactCourse?.name ?? "—"}
-          />
-          <MetricRow
-            label="Worst impact course"
-            value={gpaOverview.worstImpactCourse?.name ?? "—"}
-          />
-
-          <div className="space-y-2 rounded-xl bg-slate-50 px-3 py-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">What If</p>
-            <label className="block text-xs text-slate-500">
-              Course
-              <select
-                value={whatIfCourseId}
-                onChange={(event) => setWhatIfCourseId(event.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700"
-              >
-                {courses.map((course) => (
-                  <option key={course.id} value={course.id}>
-                    {course.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="block text-xs text-slate-500">
-              Temporary grade %
-              <input
-                type="number"
-                min={0}
-                max={100}
-                value={whatIfGrade}
-                onChange={(event) => setWhatIfGrade(event.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700"
-              />
-            </label>
-          </div>
         </Card>
 
         <Card
