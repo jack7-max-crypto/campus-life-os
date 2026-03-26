@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Card, MetricRow } from "@/components/ui/card";
-import { mockCourses } from "@/lib/academics/mockData";
-import { Assignment, AssignmentStatus, Course } from "@/lib/academics/types";
+import { ACTIVE_SEED_PROFILE, getSeedCourses } from "@/lib/academics/mockData";
+import { Assignment, AssignmentStatus, Course, GradeCategory } from "@/lib/academics/types";
 import {
   calculateCourseMetrics,
   calculatePriorityScore,
@@ -27,6 +27,20 @@ type AssignmentDraft = {
   status: AssignmentStatus;
 };
 
+type CategoryDraft = {
+  name: string;
+  weight: string;
+};
+
+type CourseDraft = {
+  id?: string;
+  name: string;
+  credits: string;
+  targetGrade: string;
+  finalExamWeight: string;
+  categories: CategoryDraft[];
+};
+
 const statusClasses: Record<string, string> = {
   completed: "bg-emerald-100 text-emerald-800",
   "in-progress": "bg-amber-100 text-amber-800",
@@ -40,6 +54,8 @@ const neededStateClasses: Record<string, string> = {
 };
 
 const ACADEMICS_STORAGE_KEY = "campus-life-os.academics.v1";
+const seedCourses = getSeedCourses(ACTIVE_SEED_PROFILE);
+const demoSeedCourses = getSeedCourses("demo");
 
 const priorityClasses: Record<string, string> = {
   High: "bg-rose-100 text-rose-700",
@@ -47,7 +63,7 @@ const priorityClasses: Record<string, string> = {
   Low: "bg-emerald-100 text-emerald-700",
 };
 
-function createEmptyDraft(defaultCategory: string): AssignmentDraft {
+function createEmptyAssignmentDraft(defaultCategory: string): AssignmentDraft {
   return {
     name: "",
     category: defaultCategory,
@@ -58,13 +74,56 @@ function createEmptyDraft(defaultCategory: string): AssignmentDraft {
   };
 }
 
+function createEmptyCourseDraft(): CourseDraft {
+  return {
+    name: "",
+    credits: "3",
+    targetGrade: "90",
+    finalExamWeight: "30",
+    categories: [
+      { name: "Assignments", weight: "70" },
+      { name: "Final Exam", weight: "30" },
+    ],
+  };
+}
+
+function createCourseDraftFromCourse(course: Course): CourseDraft {
+  return {
+    id: course.id,
+    name: course.name,
+    credits: String(course.credits),
+    targetGrade: String(course.targetGrade),
+    finalExamWeight: String(course.finalExamWeight),
+    categories: course.categories.map((category) => ({
+      name: category.name,
+      weight: String(category.weight),
+    })),
+  };
+}
+
+function normalizeCategories(categories: CategoryDraft[]): GradeCategory[] {
+  return categories
+    .map((category) => ({
+      name: category.name.trim(),
+      weight: Number(category.weight),
+    }))
+    .filter((category) => category.name.length > 0);
+}
+
+function categoryWeightTotal(categories: CategoryDraft[]): number {
+  return categories.reduce((sum, category) => sum + (Number(category.weight) || 0), 0);
+}
+
 export default function AcademicsPage() {
-  const [courses, setCourses] = useState<Course[]>(mockCourses);
+  const [courses, setCourses] = useState<Course[]>(seedCourses);
   const [hasHydrated, setHasHydrated] = useState(false);
-  const [selectedCourseId, setSelectedCourseId] = useState(mockCourses[0]?.id ?? "");
+  const [selectedCourseId, setSelectedCourseId] = useState(seedCourses[0]?.id ?? "");
   const [assignmentCourseFilter, setAssignmentCourseFilter] = useState<string>("all");
-  const [draft, setDraft] = useState<AssignmentDraft | null>(null);
-  const [isEditMode, setIsEditMode] = useState(false);
+  const [assignmentDraft, setAssignmentDraft] = useState<AssignmentDraft | null>(null);
+  const [isEditAssignmentMode, setIsEditAssignmentMode] = useState(false);
+  const [courseDraft, setCourseDraft] = useState<CourseDraft | null>(null);
+  const [isEditCourseMode, setIsEditCourseMode] = useState(false);
+  const [courseFormError, setCourseFormError] = useState<string | null>(null);
 
   const selectedCourse = useMemo(
     () => courses.find((course) => course.id === selectedCourseId) ?? courses[0],
@@ -112,6 +171,7 @@ export default function AcademicsPage() {
       const parsed = JSON.parse(raw) as Course[];
       if (Array.isArray(parsed) && parsed.length > 0) {
         setCourses(parsed);
+        setSelectedCourseId(parsed[0].id);
       }
     } catch {
       // keep mock seed data fallback
@@ -125,18 +185,15 @@ export default function AcademicsPage() {
     window.localStorage.setItem(ACADEMICS_STORAGE_KEY, JSON.stringify(courses));
   }, [courses, hasHydrated]);
 
-  if (!selectedCourse || !metrics) {
-    return null;
-  }
-
   const openAddAssignment = () => {
+    if (!selectedCourse) return;
     const defaultCategory = selectedCourse.categories[0]?.name ?? "";
-    setDraft(createEmptyDraft(defaultCategory));
-    setIsEditMode(false);
+    setAssignmentDraft(createEmptyAssignmentDraft(defaultCategory));
+    setIsEditAssignmentMode(false);
   };
 
   const openEditAssignment = (assignment: Assignment) => {
-    setDraft({
+    setAssignmentDraft({
       id: assignment.id,
       name: assignment.name,
       category: assignment.category,
@@ -151,27 +208,29 @@ export default function AcademicsPage() {
       dueDate: assignment.dueDate,
       status: assignment.status,
     });
-    setIsEditMode(true);
+    setIsEditAssignmentMode(true);
   };
 
-  const closeDraft = () => {
-    setDraft(null);
-    setIsEditMode(false);
+  const closeAssignmentDraft = () => {
+    setAssignmentDraft(null);
+    setIsEditAssignmentMode(false);
   };
 
-  const saveDraft = () => {
-    if (!draft || !draft.name.trim()) return;
+  const saveAssignmentDraft = () => {
+    if (!assignmentDraft || !selectedCourse || !assignmentDraft.name.trim()) return;
 
-    const scoreEarned = draft.scoreEarned.trim() === "" ? null : Number(draft.scoreEarned);
-    const scorePossible = draft.scorePossible.trim() === "" ? null : Number(draft.scorePossible);
+    const scoreEarned =
+      assignmentDraft.scoreEarned.trim() === "" ? null : Number(assignmentDraft.scoreEarned);
+    const scorePossible =
+      assignmentDraft.scorePossible.trim() === "" ? null : Number(assignmentDraft.scorePossible);
 
     const normalized: Assignment = {
-      id: draft.id ?? `${selectedCourse.id}-${Date.now()}`,
+      id: assignmentDraft.id ?? `${selectedCourse.id}-${Date.now()}`,
       courseId: selectedCourse.id,
-      name: draft.name.trim(),
-      category: draft.category,
-      dueDate: draft.dueDate || new Date().toISOString().slice(0, 10),
-      status: draft.status,
+      name: assignmentDraft.name.trim(),
+      category: assignmentDraft.category,
+      dueDate: assignmentDraft.dueDate || new Date().toISOString().slice(0, 10),
+      status: assignmentDraft.status,
       scoreEarned: Number.isFinite(scoreEarned) ? scoreEarned : null,
       scorePossible: Number.isFinite(scorePossible) ? scorePossible : null,
     };
@@ -180,11 +239,11 @@ export default function AcademicsPage() {
       prev.map((course) => {
         if (course.id !== selectedCourse.id) return course;
 
-        if (isEditMode && draft.id) {
+        if (isEditAssignmentMode && assignmentDraft.id) {
           return {
             ...course,
             assignments: course.assignments.map((assignment) =>
-              assignment.id === draft.id ? normalized : assignment,
+              assignment.id === assignmentDraft.id ? normalized : assignment,
             ),
           };
         }
@@ -196,10 +255,11 @@ export default function AcademicsPage() {
       }),
     );
 
-    closeDraft();
+    closeAssignmentDraft();
   };
 
   const updateTargetGrade = (value: string) => {
+    if (!selectedCourse) return;
     const parsed = Number(value);
     const nextTarget = Number.isFinite(parsed) ? Math.max(0, Math.min(parsed, 100)) : 0;
 
@@ -210,11 +270,137 @@ export default function AcademicsPage() {
     );
   };
 
-  const resetDemoData = () => {
-    setCourses(mockCourses);
-    setSelectedCourseId(mockCourses[0]?.id ?? "");
+  const openAddCourse = () => {
+    setCourseDraft(createEmptyCourseDraft());
+    setIsEditCourseMode(false);
+    setCourseFormError(null);
+  };
+
+  const openEditCourse = () => {
+    if (!selectedCourse) return;
+    setCourseDraft(createCourseDraftFromCourse(selectedCourse));
+    setIsEditCourseMode(true);
+    setCourseFormError(null);
+  };
+
+  const closeCourseDraft = () => {
+    setCourseDraft(null);
+    setIsEditCourseMode(false);
+    setCourseFormError(null);
+  };
+
+  const addCategoryDraft = () => {
+    setCourseDraft((prev) =>
+      prev ? { ...prev, categories: [...prev.categories, { name: "", weight: "0" }] } : prev,
+    );
+  };
+
+  const removeCategoryDraft = (index: number) => {
+    setCourseDraft((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        categories: prev.categories.filter((_, i) => i !== index),
+      };
+    });
+  };
+
+  const updateCategoryDraft = (index: number, key: "name" | "weight", value: string) => {
+    setCourseDraft((prev) => {
+      if (!prev) return prev;
+      const nextCategories = [...prev.categories];
+      nextCategories[index] = {
+        ...nextCategories[index],
+        [key]: value,
+      };
+      return {
+        ...prev,
+        categories: nextCategories,
+      };
+    });
+  };
+
+  const saveCourseDraft = () => {
+    if (!courseDraft) return;
+
+    const normalizedCategories = normalizeCategories(courseDraft.categories);
+    const totalWeight = categoryWeightTotal(courseDraft.categories);
+
+    if (!courseDraft.name.trim()) {
+      setCourseFormError("Course name is required.");
+      return;
+    }
+
+    if (normalizedCategories.length === 0) {
+      setCourseFormError("Add at least one grading category.");
+      return;
+    }
+
+    if (Math.round(totalWeight * 100) / 100 !== 100) {
+      setCourseFormError(`Category weights must total 100%. Current total: ${totalWeight}%.`);
+      return;
+    }
+
+    const normalizedCourse: Course = {
+      id:
+        courseDraft.id ??
+        `${courseDraft.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now()}`,
+      name: courseDraft.name.trim(),
+      credits: Number(courseDraft.credits) || 0,
+      targetGrade: Number(courseDraft.targetGrade) || 0,
+      finalExamWeight: Number(courseDraft.finalExamWeight) || 0,
+      categories: normalizedCategories,
+      assignments: [],
+    };
+
+    setCourses((prev) => {
+      if (isEditCourseMode && courseDraft.id) {
+        return prev.map((course) => {
+          if (course.id !== courseDraft.id) return course;
+
+          const categoryNames = new Set(normalizedCategories.map((category) => category.name));
+          const fallbackCategory = normalizedCategories[0]?.name ?? "Assignments";
+
+          return {
+            ...normalizedCourse,
+            assignments: course.assignments.map((assignment) => ({
+              ...assignment,
+              category: categoryNames.has(assignment.category)
+                ? assignment.category
+                : fallbackCategory,
+            })),
+          };
+        });
+      }
+
+      return [...prev, normalizedCourse];
+    });
+
+    setSelectedCourseId(normalizedCourse.id);
+    closeCourseDraft();
+  };
+
+  const deleteSelectedCourse = () => {
+    if (!selectedCourse) return;
+
+    setCourses((prev) => {
+      const next = prev.filter((course) => course.id !== selectedCourse.id);
+      const fallbackId = next[0]?.id ?? "";
+      setSelectedCourseId(fallbackId);
+      return next;
+    });
+
     setAssignmentCourseFilter("all");
-    closeDraft();
+    closeAssignmentDraft();
+    closeCourseDraft();
+  };
+
+  const resetDemoData = () => {
+    setCourses(demoSeedCourses);
+    setSelectedCourseId(demoSeedCourses[0]?.id ?? "");
+    setAssignmentCourseFilter("all");
+    closeAssignmentDraft();
+    closeCourseDraft();
     window.localStorage.removeItem(ACADEMICS_STORAGE_KEY);
   };
 
@@ -223,6 +409,29 @@ export default function AcademicsPage() {
     if (value > 100) return `${formatPercent(value)} (over 100%)`;
     return formatPercent(value);
   };
+
+  if (!selectedCourse || !metrics) {
+    return (
+      <div className="space-y-4 sm:space-y-6">
+        <section>
+          <h2 className="text-2xl font-semibold tracking-tight">Academics</h2>
+          <p className="mt-1 text-sm text-slate-500">No courses yet. Add your first course.</p>
+        </section>
+        <button
+          onClick={openAddCourse}
+          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+        >
+          Add course
+        </button>
+
+        {courseDraft ? (
+          <Card title="Add course" subtitle="Create your course setup">
+            <p className="text-sm text-slate-600">Complete course details and save.</p>
+          </Card>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -263,6 +472,157 @@ export default function AcademicsPage() {
           </label>
         </div>
       </section>
+
+      <section className="flex flex-wrap gap-2">
+        <button
+          onClick={openAddCourse}
+          className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-700"
+        >
+          Add course
+        </button>
+        <button
+          onClick={openEditCourse}
+          className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+        >
+          Edit course
+        </button>
+        <button
+          onClick={deleteSelectedCourse}
+          className="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50"
+        >
+          Delete course
+        </button>
+      </section>
+
+      {courseDraft ? (
+        <Card
+          title={isEditCourseMode ? "Edit course" : "Add course"}
+          subtitle="Manage course details and grading structure"
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="text-xs text-slate-500">
+              Course name
+              <input
+                value={courseDraft.name}
+                onChange={(event) =>
+                  setCourseDraft((prev) => (prev ? { ...prev, name: event.target.value } : prev))
+                }
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700"
+              />
+            </label>
+
+            <label className="text-xs text-slate-500">
+              Credits
+              <input
+                type="number"
+                min={0}
+                value={courseDraft.credits}
+                onChange={(event) =>
+                  setCourseDraft((prev) =>
+                    prev ? { ...prev, credits: event.target.value } : prev,
+                  )
+                }
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700"
+              />
+            </label>
+
+            <label className="text-xs text-slate-500">
+              Target grade
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={courseDraft.targetGrade}
+                onChange={(event) =>
+                  setCourseDraft((prev) =>
+                    prev ? { ...prev, targetGrade: event.target.value } : prev,
+                  )
+                }
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700"
+              />
+            </label>
+
+            <label className="text-xs text-slate-500">
+              Final exam weight %
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={courseDraft.finalExamWeight}
+                onChange={(event) =>
+                  setCourseDraft((prev) =>
+                    prev ? { ...prev, finalExamWeight: event.target.value } : prev,
+                  )
+                }
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700"
+              />
+            </label>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Grading categories
+              </p>
+              <button
+                onClick={addCategoryDraft}
+                className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+              >
+                Add category
+              </button>
+            </div>
+
+            {courseDraft.categories.map((category, index) => (
+              <div key={`${index}-${category.name}`} className="grid gap-2 sm:grid-cols-[1fr_120px_auto]">
+                <input
+                  placeholder="Category name"
+                  value={category.name}
+                  onChange={(event) => updateCategoryDraft(index, "name", event.target.value)}
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700"
+                />
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  placeholder="Weight"
+                  value={category.weight}
+                  onChange={(event) => updateCategoryDraft(index, "weight", event.target.value)}
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700"
+                />
+                <button
+                  onClick={() => removeCategoryDraft(index)}
+                  className="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+
+            <p className="text-xs text-slate-500">
+              Total category weight: <strong>{categoryWeightTotal(courseDraft.categories)}%</strong>
+            </p>
+          </div>
+
+          {courseFormError ? (
+            <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{courseFormError}</p>
+          ) : null}
+
+          <div className="flex gap-2">
+            <button
+              onClick={saveCourseDraft}
+              className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+            >
+              {isEditCourseMode ? "Save course" : "Create course"}
+            </button>
+            <button
+              onClick={closeCourseDraft}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+            >
+              Cancel
+            </button>
+          </div>
+        </Card>
+      ) : null}
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <Card title="Courses overview" subtitle="Live course model">
@@ -433,17 +793,19 @@ export default function AcademicsPage() {
         </div>
       </Card>
 
-      {draft ? (
+      {assignmentDraft ? (
         <Card
-          title={isEditMode ? "Edit assignment" : "Add assignment"}
+          title={isEditAssignmentMode ? "Edit assignment" : "Add assignment"}
           subtitle={`Course: ${selectedCourse.name}`}
         >
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="text-xs text-slate-500">
               Assignment name
               <input
-                value={draft.name}
-                onChange={(event) => setDraft((prev) => (prev ? { ...prev, name: event.target.value } : prev))}
+                value={assignmentDraft.name}
+                onChange={(event) =>
+                  setAssignmentDraft((prev) => (prev ? { ...prev, name: event.target.value } : prev))
+                }
                 className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700"
               />
             </label>
@@ -451,9 +813,11 @@ export default function AcademicsPage() {
             <label className="text-xs text-slate-500">
               Category
               <select
-                value={draft.category}
+                value={assignmentDraft.category}
                 onChange={(event) =>
-                  setDraft((prev) => (prev ? { ...prev, category: event.target.value } : prev))
+                  setAssignmentDraft((prev) =>
+                    prev ? { ...prev, category: event.target.value } : prev,
+                  )
                 }
                 className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700"
               >
@@ -469,9 +833,11 @@ export default function AcademicsPage() {
               Score earned (optional)
               <input
                 type="number"
-                value={draft.scoreEarned}
+                value={assignmentDraft.scoreEarned}
                 onChange={(event) =>
-                  setDraft((prev) => (prev ? { ...prev, scoreEarned: event.target.value } : prev))
+                  setAssignmentDraft((prev) =>
+                    prev ? { ...prev, scoreEarned: event.target.value } : prev,
+                  )
                 }
                 className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700"
               />
@@ -481,9 +847,11 @@ export default function AcademicsPage() {
               Score possible (optional)
               <input
                 type="number"
-                value={draft.scorePossible}
+                value={assignmentDraft.scorePossible}
                 onChange={(event) =>
-                  setDraft((prev) => (prev ? { ...prev, scorePossible: event.target.value } : prev))
+                  setAssignmentDraft((prev) =>
+                    prev ? { ...prev, scorePossible: event.target.value } : prev,
+                  )
                 }
                 className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700"
               />
@@ -493,8 +861,12 @@ export default function AcademicsPage() {
               Due date
               <input
                 type="date"
-                value={draft.dueDate}
-                onChange={(event) => setDraft((prev) => (prev ? { ...prev, dueDate: event.target.value } : prev))}
+                value={assignmentDraft.dueDate}
+                onChange={(event) =>
+                  setAssignmentDraft((prev) =>
+                    prev ? { ...prev, dueDate: event.target.value } : prev,
+                  )
+                }
                 className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700"
               />
             </label>
@@ -502,9 +874,9 @@ export default function AcademicsPage() {
             <label className="text-xs text-slate-500">
               Status
               <select
-                value={draft.status}
+                value={assignmentDraft.status}
                 onChange={(event) =>
-                  setDraft((prev) =>
+                  setAssignmentDraft((prev) =>
                     prev ? { ...prev, status: event.target.value as AssignmentStatus } : prev,
                   )
                 }
@@ -523,13 +895,13 @@ export default function AcademicsPage() {
 
           <div className="flex gap-2">
             <button
-              onClick={saveDraft}
+              onClick={saveAssignmentDraft}
               className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700"
             >
-              {isEditMode ? "Save changes" : "Add assignment"}
+              {isEditAssignmentMode ? "Save changes" : "Add assignment"}
             </button>
             <button
-              onClick={closeDraft}
+              onClick={closeAssignmentDraft}
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
             >
               Cancel
