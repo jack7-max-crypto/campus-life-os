@@ -113,7 +113,36 @@ function normalizeCategories(categories: CategoryDraft[]): GradeCategory[] {
 function categoryWeightTotal(categories: CategoryDraft[]): number {
   return categories.reduce((sum, category) => sum + (Number(category.weight) || 0), 0);
 }
+type GpaScale = "seven_point" | "ten_point";
 
+function percentageToGpa(percent: number, scale: GpaScale): number {
+  const p = Math.max(0, Math.min(100, percent));
+
+  if (scale === "seven_point") {
+    if (p >= 93) return 4.0;
+    if (p >= 90) return 3.7;
+    if (p >= 87) return 3.3;
+    if (p >= 83) return 3.0;
+    if (p >= 80) return 2.7;
+    if (p >= 77) return 2.3;
+    if (p >= 73) return 2.0;
+    if (p >= 70) return 1.7;
+    if (p >= 67) return 1.3;
+    if (p >= 63) return 1.0;
+    if (p >= 60) return 0.7;
+    return 0;
+  }
+
+  if (p >= 90) return 4.0;
+  if (p >= 80) return 3.0;
+  if (p >= 70) return 2.0;
+  if (p >= 60) return 1.0;
+  return 0;
+}
+
+function formatGpa(value: number): string {
+  return (Math.round(value * 100) / 100).toFixed(2);
+}
 export default function AcademicsPage() {
   const [courses, setCourses] = useState<Course[]>(seedCourses);
   const [hasHydrated, setHasHydrated] = useState(false);
@@ -124,7 +153,8 @@ export default function AcademicsPage() {
   const [courseDraft, setCourseDraft] = useState<CourseDraft | null>(null);
   const [isEditCourseMode, setIsEditCourseMode] = useState(false);
   const [courseFormError, setCourseFormError] = useState<string | null>(null);
-
+  const [gpaScale, setGpaScale] = useState<GpaScale>("seven_point");
+  const [whatIfGrade, setWhatIfGrade] = useState("");
   const selectedCourse = useMemo(
     () => courses.find((course) => course.id === selectedCourseId) ?? courses[0],
     [courses, selectedCourseId],
@@ -159,7 +189,69 @@ export default function AcademicsPage() {
     }
     return allAssignments.filter((assignment) => assignment.courseId === assignmentCourseFilter);
   }, [allAssignments, assignmentCourseFilter]);
+  const courseGpaRows = useMemo(() => {
+    return courses.map((course) => {
+      const courseMetrics = calculateCourseMetrics(course);
+      const currentPercent = courseMetrics.currentGrade;
+      const projectedPercent = courseMetrics.projectedGrade;
 
+      return {
+        course,
+        credits: course.credits,
+        currentPercent,
+        projectedPercent,
+        currentGpa: percentageToGpa(currentPercent, gpaScale),
+        projectedGpa: percentageToGpa(projectedPercent, gpaScale),
+      };
+    });
+  }, [courses, gpaScale]);
+
+  const currentGpa = useMemo(() => {
+    const totalCredits = courseGpaRows.reduce((sum, row) => sum + row.credits, 0);
+    if (totalCredits === 0) return 0;
+
+    return (
+      courseGpaRows.reduce((sum, row) => sum + row.currentGpa * row.credits, 0) / totalCredits
+    );
+  }, [courseGpaRows]);
+
+  const projectedGpa = useMemo(() => {
+    const totalCredits = courseGpaRows.reduce((sum, row) => sum + row.credits, 0);
+    if (totalCredits === 0) return 0;
+
+    return (
+      courseGpaRows.reduce((sum, row) => sum + row.projectedGpa * row.credits, 0) / totalCredits
+    );
+  }, [courseGpaRows]);
+
+  const whatIfProjectedGpa = useMemo(() => {
+    const totalCredits = courses.reduce((sum, course) => sum + course.credits, 0);
+    if (totalCredits === 0) return 0;
+
+    const parsedWhatIf = whatIfGrade.trim() === "" ? null : Number(whatIfGrade);
+
+    return (
+      courses.reduce((sum, course) => {
+        const courseMetrics = calculateCourseMetrics(course);
+        const projectedPercent =
+          course.id === selectedCourse.id && parsedWhatIf !== null && Number.isFinite(parsedWhatIf)
+            ? parsedWhatIf
+            : courseMetrics.projectedGrade;
+
+        return sum + percentageToGpa(projectedPercent, gpaScale) * course.credits;
+      }, 0) / totalCredits
+    );
+  }, [courses, gpaScale, selectedCourse.id, whatIfGrade]);
+
+  const bestImpactCourse = useMemo(() => {
+    if (courseGpaRows.length === 0) return null;
+    return [...courseGpaRows].sort((a, b) => b.projectedGpa - a.projectedGpa)[0];
+  }, [courseGpaRows]);
+
+  const worstImpactCourse = useMemo(() => {
+    if (courseGpaRows.length === 0) return null;
+    return [...courseGpaRows].sort((a, b) => a.projectedGpa - b.projectedGpa)[0];
+  }, [courseGpaRows]);
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(ACADEMICS_STORAGE_KEY);
@@ -624,7 +716,7 @@ export default function AcademicsPage() {
         </Card>
       ) : null}
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3"> 
         <Card title="Courses overview" subtitle="Live course model">
           <MetricRow label="Active courses" value={`${courses.length}`} />
           <MetricRow
@@ -639,7 +731,55 @@ export default function AcademicsPage() {
             )}
           />
         </Card>
+        <Card title="GPA Overview" subtitle="Credit-weighted estimate">
+          <div className="mb-3 grid gap-3 sm:grid-cols-2">
+            <label className="text-xs text-slate-500">
+              GPA scale
+              <select
+                value={gpaScale}
+                onChange={(event) => setGpaScale(event.target.value as GpaScale)}
+                className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+              >
+                <option value="seven_point">7-point style</option>
+                <option value="ten_point">10-point style</option>
+              </select>
+            </label>
 
+            <label className="text-xs text-slate-500">
+              What-if projected grade for {selectedCourse.name}
+              <input
+                type="number"
+                min={0}
+                max={100}
+                step="0.1"
+                value={whatIfGrade}
+                onChange={(event) => setWhatIfGrade(event.target.value)}
+                placeholder={formatPercent(metrics.projectedGrade)}
+                className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+              />
+            </label>
+          </div>
+
+          <MetricRow label="Current GPA" value={formatGpa(currentGpa)} />
+          <MetricRow label="Projected GPA" value={formatGpa(projectedGpa)} />
+          <MetricRow label="What-if GPA" value={formatGpa(whatIfProjectedGpa)} />
+          <MetricRow
+            label="Best impact course"
+            value={
+              bestImpactCourse
+                ? `${bestImpactCourse.course.name} (${formatGpa(bestImpactCourse.projectedGpa)})`
+                : "—"
+            }
+          />
+          <MetricRow
+            label="Worst impact course"
+            value={
+              worstImpactCourse
+                ? `${worstImpactCourse.course.name} (${formatGpa(worstImpactCourse.projectedGpa)})`
+                : "—"
+            }
+          />
+        </Card>
         <Card title="Current grades" subtitle={selectedCourse.name}>
           <MetricRow
             label="Current"
