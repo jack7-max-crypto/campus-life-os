@@ -2,12 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Card, MetricRow } from "@/components/ui/card";
-import { ACTIVE_SEED_PROFILE, getSeedCourses } from "@/lib/academics/mockData";
+import { mockCourses } from "@/lib/academics/mockData";
 import { Assignment, Course } from "@/lib/academics/types";
 import { calculateCourseMetrics, formatDate, formatPercent } from "@/lib/academics/utils";
 
 const ACADEMICS_STORAGE_KEY = "campus-life-os.academics.v1";
-const fallbackCourses = getSeedCourses(ACTIVE_SEED_PROFILE);
+const fallbackCourses = mockCourses;
 
 type AssignmentWithCourse = Assignment & { courseName: string };
 
