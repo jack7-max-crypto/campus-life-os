@@ -29,5 +29,10 @@ export function useCourses() {
     }
   }, []);
 
+  useEffect(() => {
+    if (!hasHydrated) return;
+    window.localStorage.setItem(ACADEMICS_STORAGE_KEY, JSON.stringify(courses));
+  }, [courses, hasHydrated]);
+
   return { courses, setCourses, hasHydrated };
 }
