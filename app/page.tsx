@@ -74,14 +74,14 @@ export default function HomePage() {
         : currentByCourse.reduce((sum, entry) => sum + entry.metrics.currentGrade, 0) / currentByCourse.length;
 
     const worstAtRisk = atRiskClasses[0];
-    const nearestAssignment = upcomingDeadlines[0];
+const nearestAssignment = upcomingDeadlines[0];
 
-    let recommendedNextStep = "Keep going—your current plan looks on track.";
-    if (worstAtRisk) {
-      recommendedNextStep = `Focus on ${worstAtRisk.course.name}: you're ${formatPercent(worstAtRisk.gap)} below target.`;
-    } else if (nearestAssignment) {
-      recommendedNextStep = `Next up: ${nearestAssignment.name} (${nearestAssignment.courseName}) due ${formatDate(nearestAssignment.dueDate)}.`;
-    }
+let recommendedNextStep = "Keep going—your current plan looks on track.";
+if (nearestAssignment) {
+  recommendedNextStep = `Next up: ${nearestAssignment.name} (${nearestAssignment.courseName}) due ${formatDate(nearestAssignment.dueDate)}.`;
+} else if (worstAtRisk) {
+  recommendedNextStep = `Focus on ${worstAtRisk.course.name}: you're ${formatPercent(worstAtRisk.gap)} below target.`;
+}
 
     return {
       activeCourses: courses.length,
