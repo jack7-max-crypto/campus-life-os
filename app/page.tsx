@@ -1,32 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Card, MetricRow } from "@/components/ui/card";
-import { mockCourses } from "@/lib/academics/mockData";
-import { Assignment, Course } from "@/lib/academics/types";
+import { Assignment } from "@/lib/academics/types";
 import { calculateCourseMetrics, formatDate, formatPercent } from "@/lib/academics/utils";
-
-const ACADEMICS_STORAGE_KEY = "campus-life-os.academics.v1";
-const fallbackCourses = mockCourses;
+import { useCourses } from "@/lib/academics/useCourses";
 
 type AssignmentWithCourse = Assignment & { courseName: string };
 
 export default function HomePage() {
-  const [courses, setCourses] = useState<Course[]>(fallbackCourses);
-
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(ACADEMICS_STORAGE_KEY);
-      if (!raw) return;
-
-      const parsed = JSON.parse(raw) as Course[];
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        setCourses(parsed);
-      }
-    } catch {
-      // Keep fallback seed data if saved data cannot be parsed.
-    }
-  }, []);
+  const { courses } = useCourses();
 
   const dashboard = useMemo(() => {
     const now = new Date();
@@ -65,23 +48,28 @@ export default function HomePage() {
     const dueInNext7Days = allAssignments.filter((assignment) => {
       const due = new Date(assignment.dueDate);
       due.setHours(0, 0, 0, 0);
-      return assignment.status !== "completed" && due.getTime() >= now.getTime() && due.getTime() <= sevenDaysFromNow.getTime();
+      return (
+        assignment.status !== "completed" &&
+        due.getTime() >= now.getTime() &&
+        due.getTime() <= sevenDaysFromNow.getTime()
+      );
     }).length;
 
     const avgCurrentGrade =
       currentByCourse.length === 0
         ? 0
-        : currentByCourse.reduce((sum, entry) => sum + entry.metrics.currentGrade, 0) / currentByCourse.length;
+        : currentByCourse.reduce((sum, entry) => sum + entry.metrics.currentGrade, 0) /
+          currentByCourse.length;
 
     const worstAtRisk = atRiskClasses[0];
-const nearestAssignment = upcomingDeadlines[0];
+    const nearestAssignment = upcomingDeadlines[0];
 
-let recommendedNextStep = "Keep going—your current plan looks on track.";
-if (nearestAssignment) {
-  recommendedNextStep = `Next up: ${nearestAssignment.name} (${nearestAssignment.courseName}) due ${formatDate(nearestAssignment.dueDate)}.`;
-} else if (worstAtRisk) {
-  recommendedNextStep = `Focus on ${worstAtRisk.course.name}: you're ${formatPercent(worstAtRisk.gap)} below target.`;
-}
+    let recommendedNextStep = "Keep going—your current plan looks on track.";
+    if (nearestAssignment) {
+      recommendedNextStep = `Next up: ${nearestAssignment.name} (${nearestAssignment.courseName}) due ${formatDate(nearestAssignment.dueDate)}.`;
+    } else if (worstAtRisk) {
+      recommendedNextStep = `Focus on ${worstAtRisk.course.name}: you're ${formatPercent(worstAtRisk.gap)} below target.`;
+    }
 
     return {
       activeCourses: courses.length,
@@ -97,14 +85,19 @@ if (nearestAssignment) {
     <div className="space-y-4 sm:space-y-6">
       <section>
         <h2 className="text-2xl font-semibold tracking-tight">Home</h2>
-        <p className="mt-1 text-sm text-slate-500">Academics dashboard powered by your saved course data.</p>
+        <p className="mt-1 text-sm text-slate-500">
+          Academics dashboard powered by your saved course data.
+        </p>
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <Card title="Today overview" subtitle="Live academics snapshot">
           <MetricRow label="Active courses" value={String(dashboard.activeCourses)} />
           <MetricRow label="Due in next 7 days" value={String(dashboard.dueInNext7Days)} />
-          <MetricRow label="Average current grade" value={formatPercent(dashboard.avgCurrentGrade)} />
+          <MetricRow
+            label="Average current grade"
+            value={formatPercent(dashboard.avgCurrentGrade)}
+          />
         </Card>
 
         <Card title="Upcoming deadlines" subtitle="Next 3 incomplete assignments">
@@ -115,7 +108,9 @@ if (nearestAssignment) {
               {dashboard.upcomingDeadlines.map((assignment) => (
                 <div key={assignment.id} className="rounded-xl bg-slate-50 px-3 py-2">
                   <p className="text-sm font-semibold text-slate-900">{assignment.name}</p>
-                  <p className="text-xs text-slate-600">{assignment.courseName} • due {formatDate(assignment.dueDate)}</p>
+                  <p className="text-xs text-slate-600">
+                    {assignment.courseName} • due {formatDate(assignment.dueDate)}
+                  </p>
                 </div>
               ))}
             </div>
@@ -131,7 +126,8 @@ if (nearestAssignment) {
                 <div key={entry.course.id} className="rounded-xl bg-rose-50 px-3 py-2">
                   <p className="text-sm font-semibold text-rose-800">{entry.course.name}</p>
                   <p className="text-xs text-rose-700">
-                    Current {formatPercent(entry.metrics.currentGrade)} vs target {formatPercent(entry.course.targetGrade)}
+                    Current {formatPercent(entry.metrics.currentGrade)} vs target{" "}
+                    {formatPercent(entry.course.targetGrade)}
                   </p>
                 </div>
               ))}
