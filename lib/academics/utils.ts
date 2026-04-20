@@ -5,6 +5,7 @@ import { Assignment, AssignmentStatus, Course } from "./types";
 type CategoryProgress = {
   weight: number;
   average: number | null;
+  completedWeight: number;
 };
 
 export type CourseMetrics = {
@@ -100,7 +101,7 @@ function groupAssignmentsByCategory(assignments: Assignment[]) {
 
 function categoryAverage(assignments: Assignment[]) {
   const completed = assignments.filter(
-    (a) => a.status === "completed" && a.scoreEarned !== null && a.scorePossible,
+    (a) => a.status === "completed" && a.scoreEarned !== null && isPositiveNumber(a.scorePossible),
   );
   if (completed.length === 0) {
     return null;
@@ -114,15 +115,51 @@ function categoryAverage(assignments: Assignment[]) {
   return totalEarned / totalPossible;
 }
 
+function isPositiveNumber(value: number | null): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
+function calculateCategoryCompletedWeight(category: { weight: number }, assignments: Assignment[]) {
+  const scoredCompleted = assignments.filter(
+    (assignment) =>
+      assignment.status === "completed" &&
+      assignment.scoreEarned !== null &&
+      isPositiveNumber(assignment.scorePossible),
+  );
+
+  if (assignments.length === 0 || scoredCompleted.length === 0) {
+    return 0;
+  }
+
+  const totalPossible = assignments.reduce(
+    (sum, assignment) => {
+      const possible = assignment.scorePossible;
+      return sum + (isPositiveNumber(possible) ? possible : 0);
+    },
+    0,
+  );
+  const completedPossible = scoredCompleted.reduce(
+    (sum, assignment) => sum + (assignment.scorePossible ?? 0),
+    0,
+  );
+
+  const completionRatio =
+    totalPossible > 0 ? completedPossible / totalPossible : scoredCompleted.length / assignments.length;
+
+  return category.weight * clamp(completionRatio, 0, 1);
+}
+
 export function calculateCourseMetrics(course: Course): CourseMetrics {
   const byCategory = groupAssignmentsByCategory(course.assignments);
 
   const categoryProgress: Record<string, CategoryProgress> = {};
   for (const category of course.categories) {
-    const average = categoryAverage(byCategory[category.name] ?? []);
+    const assignments = byCategory[category.name] ?? [];
+    const average = categoryAverage(assignments);
     categoryProgress[category.name] = {
       weight: category.weight,
       average,
+      completedWeight: average === null ? 0 : calculateCategoryCompletedWeight(category, assignments),
     };
   }
 
@@ -130,22 +167,16 @@ export function calculateCourseMetrics(course: Course): CourseMetrics {
   let currentPoints = 0;
 
   for (const category of Object.values(categoryProgress)) {
-    if (category.average !== null) {
-      completedWeight += category.weight;
-      currentPoints += category.average * category.weight;
+    if (category.average !== null && category.completedWeight > 0) {
+      completedWeight += category.completedWeight;
+      currentPoints += category.average * category.completedWeight;
     }
   }
 
   const remainingWeight = Math.max(0, 100 - completedWeight);
   const currentGrade = completedWeight > 0 ? (currentPoints / completedWeight) * 100 : 0;
   const overallAverage = completedWeight > 0 ? currentPoints / completedWeight : 0;
-
-  let projectedPoints = currentPoints;
-  for (const category of Object.values(categoryProgress)) {
-    if (category.average === null) {
-      projectedPoints += overallAverage * category.weight;
-    }
-  }
+  const projectedPoints = currentPoints + overallAverage * remainingWeight;
 
   const neededOnRemainingRaw =
     remainingWeight > 0
@@ -154,12 +185,13 @@ export function calculateCourseMetrics(course: Course): CourseMetrics {
         ? 0
         : 101;
 
-  const nonFinalRemainingWeight = Math.max(0, remainingWeight - course.finalExamWeight);
+  const finalRemainingWeight = clamp(course.finalExamWeight, 0, remainingWeight);
+  const nonFinalRemainingWeight = Math.max(0, remainingWeight - finalRemainingWeight);
   const projectedNonFinalRemainingPoints = nonFinalRemainingWeight * overallAverage;
   const neededOnFinalRaw =
-    course.finalExamWeight > 0
+    finalRemainingWeight > 0
       ? ((course.targetGrade - currentPoints - projectedNonFinalRemainingPoints) /
-          course.finalExamWeight) *
+          finalRemainingWeight) *
         100
       : course.targetGrade <= currentPoints + projectedNonFinalRemainingPoints
         ? 0
@@ -207,19 +239,8 @@ function calculateApproximateRemainingWeight(course: Course) {
   return round(
     course.categories.reduce((sum, category) => {
       const assignments = byCategory[category.name] ?? [];
-      if (assignments.length === 0) {
-        return sum + category.weight;
-      }
-
-      const incompleteCount = assignments.filter(
-        (assignment) => assignment.status !== "completed",
-      ).length;
-
-      if (incompleteCount === 0) {
-        return sum;
-      }
-
-      return sum + category.weight * (incompleteCount / assignments.length);
+      const completedWeight = calculateCategoryCompletedWeight(category, assignments);
+      return sum + Math.max(0, category.weight - completedWeight);
     }, 0),
   );
 }

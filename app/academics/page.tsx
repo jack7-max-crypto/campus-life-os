@@ -355,11 +355,7 @@ function TabButton({
       type="button"
       role="tab"
       aria-selected={isActive}
-      className={`rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200 ${
-        isActive
-          ? "bg-white text-black shadow-[0_10px_26px_rgba(0,0,0,0.35)]"
-          : "text-white/55 hover:bg-white/[0.04] hover:text-white"
-      }`}
+      className="system-segmented-tab px-4 py-2 text-sm font-semibold"
       onClick={() => onClick(tab)}
     >
       {label}
@@ -550,7 +546,7 @@ export default function AcademicsPage() {
   }, [courses, gpaScale, selectedCourse.id, totalCredits, whatIfGrade]);
 
   const bestGpaUpside = useMemo(() => {
-    if (courseGpaRows.length === 0) return null;
+    if (courseGpaRows.length === 0 || totalCredits === 0) return null;
     return [...courseGpaRows]
       .map((row) => {
         const courseInsight = courseInsights.find((item) => item.course.id === row.course.id);

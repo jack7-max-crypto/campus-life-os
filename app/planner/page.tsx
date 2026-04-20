@@ -631,7 +631,7 @@ export default function PlannerPage() {
                 onClick={() => setActiveFilter(filter)}
                 className={`min-h-[44px] rounded-full border px-4 py-2 text-sm font-medium transition-all duration-200 active:scale-[0.98] ${
                   isActive
-                    ? "border-white bg-white text-black shadow-[0_12px_30px_rgba(0,0,0,0.3)] hover:bg-white/92"
+                    ? "system-selected-control"
                     : "border-white/[0.08] bg-[#09090a] text-white/58 hover:border-white/[0.14] hover:bg-white/[0.05] hover:text-white"
                 }`}
               >
@@ -662,7 +662,7 @@ export default function PlannerPage() {
             onClick={handleFocusModeToggle}
             disabled={!isReady || !mostImportantItem}
             className={`${plannerSecondaryButtonClassName} ${
-              isFocusMode ? "border-white bg-white text-black hover:bg-white" : ""
+              isFocusMode ? "system-selected-control" : ""
             }`}
           >
             {isFocusMode ? "Exit focus mode" : "Enter focus mode"}

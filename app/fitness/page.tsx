@@ -276,11 +276,7 @@ function TabButton({
       type="button"
       role="tab"
       aria-selected={isActive}
-      className={`rounded-[14px] px-4 py-2 text-sm font-semibold transition-all duration-200 ${
-        isActive
-          ? "bg-white text-black shadow-[0_10px_24px_rgba(0,0,0,0.3)]"
-          : "text-white/52 hover:bg-white/[0.04] hover:text-white"
-      }`}
+      className="system-segmented-tab px-4 py-2 text-sm font-semibold"
       onClick={() => onClick(tab)}
     >
       {label}
@@ -567,7 +563,7 @@ function LiftEntryDialog({
                     onClick={() => onDraftChange({ ...draft, lift })}
                     className={`rounded-2xl border px-3 py-2.5 text-left text-sm font-semibold transition-colors ${
                       isActive
-                        ? "border-white/[0.2] bg-white text-black"
+                        ? "system-selected-control"
                         : "border-white/[0.08] bg-black/45 text-white/72 hover:border-white/[0.14] hover:text-white"
                     }`}
                   >

@@ -5,6 +5,7 @@ html {
 }
 
 :root {
+  color-scheme: dark;
   --background: #010102;
   --foreground: #f3f3f4;
   --surface-bg: rgba(10, 10, 11, 0.9);
@@ -104,6 +105,22 @@ body {
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 }
 
+body,
+button,
+input,
+textarea,
+select {
+  color: var(--foreground);
+}
+
+a {
+  color: inherit;
+}
+
+::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
 .system-panel {
   position: relative;
   overflow: hidden;
@@ -126,6 +143,49 @@ body {
   border: 1px solid var(--surface-border-soft);
   background: var(--surface-bg-subtle);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.42);
+}
+
+.system-segmented-tab {
+  min-height: 40px;
+  border: 1px solid transparent;
+  border-radius: 0.875rem;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.58);
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.system-segmented-tab:hover {
+  background: rgba(255, 255, 255, 0.045);
+  color: rgba(255, 255, 255, 0.96);
+}
+
+.system-segmented-tab:active {
+  transform: scale(0.98);
+}
+
+.system-selected-control,
+.system-segmented-tab[aria-selected="true"] {
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  background:
+    linear-gradient(180deg, rgba(244, 244, 245, 0.96), rgba(222, 222, 225, 0.9)),
+    rgba(238, 238, 240, 0.94) !important;
+  color: #050506 !important;
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.system-selected-control:hover,
+.system-segmented-tab[aria-selected="true"]:hover {
+  background:
+    linear-gradient(180deg, rgba(250, 250, 251, 0.98), rgba(226, 226, 229, 0.94)),
+    rgba(240, 240, 242, 0.96) !important;
+  color: #050506 !important;
 }
 
 .system-card-interactive {
