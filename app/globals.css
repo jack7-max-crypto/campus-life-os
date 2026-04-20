@@ -1,12 +1,365 @@
 @import "tailwindcss";
 
+html {
+  scroll-behavior: smooth;
+}
+
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #010102;
+  --foreground: #f3f3f4;
+  --surface-bg: rgba(10, 10, 11, 0.9);
+  --surface-bg-raised: rgba(14, 14, 16, 0.96);
+  --surface-bg-subtle: rgba(7, 7, 8, 0.84);
+  --surface-border: rgba(255, 255, 255, 0.07);
+  --surface-border-strong: rgba(255, 255, 255, 0.12);
+  --surface-border-soft: rgba(255, 255, 255, 0.045);
+  --card-radius-lg: 24px;
+  --card-radius-md: 18px;
+  --card-radius-sm: 14px;
+  --card-shadow: 0 14px 36px rgba(0, 0, 0, 0.56);
+  --card-shadow-hover: 0 18px 44px rgba(0, 0, 0, 0.68);
+  --card-shadow-focus:
+    0 20px 54px rgba(0, 0, 0, 0.74),
+    0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes sectionEnter {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes focusCompleteIn {
+  from {
+    opacity: 0;
+    transform: scale(0.985) translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes ambientPulse {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  50% {
+    opacity: 0.34;
+    transform: translate3d(0, -2%, 0) scale(1.06);
+  }
+}
+
+@keyframes grainShift {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  50% {
+    transform: translate3d(-1.2%, 1%, 0);
+  }
+
+  100% {
+    transform: translate3d(1%, -1%, 0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.4s ease forwards;
+}
+
+.animate-focusCompleteIn {
+  animation: focusCompleteIn 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.system-section-enter {
+  opacity: 0;
+  animation: sectionEnter 0.56s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+.system-panel {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--surface-border);
+  background: var(--surface-bg-raised);
+  box-shadow: var(--card-shadow);
+}
+
+.system-panel::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 2.75rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.028), transparent);
+}
+
+.system-subtle-panel {
+  border: 1px solid var(--surface-border-soft);
+  background: var(--surface-bg-subtle);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.42);
+}
+
+.system-card-interactive {
+  transition:
+    transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    background-color 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: transform, box-shadow;
+}
+
+.system-card-interactive:hover {
+  transform: translateY(-2px);
+  border-color: var(--surface-border-strong);
+  box-shadow:
+    var(--card-shadow-hover),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.system-card-interactive:focus-visible {
+  outline: none;
+  box-shadow: var(--card-shadow-focus);
+}
+
+.system-card-priority {
+  border-color: rgba(239, 68, 68, 0.2);
+  background:
+    linear-gradient(180deg, rgba(239, 68, 68, 0.05), transparent 42%),
+    var(--surface-bg-subtle);
+  box-shadow:
+    0 14px 34px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(239, 68, 68, 0.08);
+}
+
+.system-card-positive {
+  border-color: rgba(52, 211, 153, 0.18);
+  background:
+    linear-gradient(180deg, rgba(16, 185, 129, 0.06), transparent 42%),
+    var(--surface-bg-subtle);
+  box-shadow:
+    0 14px 34px rgba(0, 0, 0, 0.46),
+    0 0 0 1px rgba(52, 211, 153, 0.06);
+}
+
+.system-focus-dim {
+  opacity: 0.45;
+  filter: blur(1.5px) saturate(0.94);
+  transform: scale(0.992);
+}
+
+.system-focus-active {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: var(--card-shadow-focus);
+}
+
+.system-radial-light {
+  background: radial-gradient(
+    circle at 50% 0%,
+    rgba(255, 255, 255, 0.035),
+    rgba(255, 255, 255, 0.012) 34%,
+    transparent 70%
+  );
+  filter: blur(24px);
+  animation: ambientPulse 20s ease-in-out infinite;
+}
+
+.system-grain {
+  background-image:
+    radial-gradient(rgba(255, 255, 255, 0.07) 0.6px, transparent 0.9px),
+    radial-gradient(rgba(255, 255, 255, 0.035) 0.5px, transparent 0.8px);
+  background-position: 0 0, 6px 6px;
+  background-size: 14px 14px, 15px 15px;
+  mix-blend-mode: soft-light;
+  opacity: 0.045;
+  animation: grainShift 18s steps(6) infinite;
+}
+
+.system-label {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.system-button-primary,
+.system-button-secondary,
+.system-button-subtle,
+.system-input,
+.system-pill {
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.system-button-primary {
+  min-height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.96);
+  border-radius: 0.875rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(238, 238, 239, 0.92)),
+    rgba(255, 255, 255, 0.96);
+  color: #050506;
+  box-shadow:
+    0 16px 38px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.system-button-primary:hover {
+  transform: translateY(-1px);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(230, 230, 232, 0.94)),
+    rgba(255, 255, 255, 0.94);
+  box-shadow:
+    0 20px 46px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.46);
+}
+
+.system-button-primary:active,
+.system-button-secondary:active,
+.system-button-subtle:active {
+  transform: scale(0.97);
+}
+
+.system-button-primary:disabled,
+.system-button-secondary:disabled,
+.system-button-subtle:disabled {
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.system-button-secondary {
+  min-height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.875rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 44%),
+    rgba(9, 9, 10, 0.9);
+  color: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
+}
+
+.system-button-secondary:hover,
+.system-button-subtle:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+  transform: translateY(-1px);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 44%),
+    rgba(255, 255, 255, 0.055);
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.38),
+    0 0 0 1px rgba(255, 255, 255, 0.035);
+}
+
+.system-button-secondary:disabled {
+  border-color: rgba(255, 255, 255, 0.04);
+  background: rgba(5, 5, 6, 0.92);
+  color: rgba(255, 255, 255, 0.32);
+}
+
+.system-button-subtle {
+  min-height: 36px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.75rem;
+  background: rgba(9, 9, 10, 0.92);
+  color: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.26);
+}
+
+.system-button-subtle:disabled {
+  border-color: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.32);
+}
+
+.system-input {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0.875rem;
+  background: rgba(5, 5, 6, 0.96);
+  color: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+  outline: none;
+}
+
+.system-input:focus {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(8, 8, 9, 0.98);
+}
+
+.system-pill {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.system-pill:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.78);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .animate-fadeIn,
+  .animate-focusCompleteIn,
+  .system-section-enter,
+  .system-radial-light,
+  .system-grain {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .system-card-interactive,
+  .system-card-interactive:hover,
+  .system-focus-active,
+  .system-focus-dim,
+  .system-button-primary,
+  .system-button-secondary,
+  .system-button-subtle,
+  .system-input,
+  .system-pill {
+    transition: none;
+    transform: none;
+    filter: none;
+  }
 }

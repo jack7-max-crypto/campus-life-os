@@ -1,33 +1,46 @@
-import { ReactNode } from "react";
+import { KeyboardEvent, ReactNode } from "react";
 
-type CardProps = {
-  title: string;
-  subtitle?: string;
-  children?: ReactNode;
+export { Card, MetricRow } from "./card/index";
+
+type GenericCardProps = {
+  children: ReactNode;
   className?: string;
+  onClick?: () => void;
 };
 
-export function Card({ title, subtitle, children, className = "" }: CardProps) {
-  return (
-    <section
-      className={`rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm shadow-slate-200/60 ${className}`}
-    >
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div>
-          <h3 className="text-sm font-semibold tracking-tight text-slate-900">{title}</h3>
-          {subtitle ? <p className="mt-1 text-xs text-slate-500">{subtitle}</p> : null}
-        </div>
-      </div>
-      <div className="space-y-3">{children}</div>
-    </section>
-  );
-}
+export default function GenericCard({
+  children,
+  className = "",
+  onClick,
+}: GenericCardProps) {
+  const isClickable = Boolean(onClick);
 
-export function MetricRow({ label, value }: { label: string; value: string }) {
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (!onClick || (event.key !== "Enter" && event.key !== " ")) {
+      return;
+    }
+
+    event.preventDefault();
+    onClick();
+  };
+
   return (
-    <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
-      <span className="text-sm text-slate-600">{label}</span>
-      <span className="text-sm font-semibold text-slate-900">{value}</span>
+    <div
+      onClick={onClick}
+      onKeyDown={handleKeyDown}
+      role={isClickable ? "button" : undefined}
+      tabIndex={isClickable ? 0 : undefined}
+      className={`
+        system-panel system-card-interactive
+        relative overflow-hidden
+        rounded-[24px]
+        transition-all duration-300 ease-out
+        p-3.5 sm:p-4
+        ${isClickable ? "cursor-pointer focus-visible:outline-none" : ""}
+        ${className}
+      `}
+    >
+      <div className="relative">{children}</div>
     </div>
   );
 }

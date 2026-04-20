@@ -1,3 +1,5 @@
+import { parseAssignmentDate } from "./dates";
+import { getEffectiveAssignments } from "./getEffectiveAssignments";
 import { Assignment, AssignmentStatus, Course } from "./types";
 
 type CategoryProgress = {
@@ -17,10 +19,40 @@ export type CourseMetrics = {
 };
 
 export type NeededScoreState = "secured" | "possible" | "impossible";
+export type RecoveryOutlook =
+  | "secured"
+  | "comfortable"
+  | "possible"
+  | "tight"
+  | "difficult"
+  | "unlikely";
+
+export type CourseIntelligence = {
+  metrics: CourseMetrics;
+  gradeGap: number;
+  upcomingAssignments: number;
+  nearestDueDays: number | null;
+  approximateRemainingWeight: number;
+  priorityScore: number;
+  priorityLabel: "High" | "Medium" | "Low";
+  reachability: RecoveryOutlook;
+  neededState: NeededScoreState;
+  reason: string;
+  recommendation: string;
+  payoffScore: number;
+};
 
 function round(value: number, decimals = 2) {
   const factor = 10 ** decimals;
   return Math.round(value * factor) / factor;
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function normalizeCourseName(value: string) {
+  return value.trim().toLowerCase();
 }
 
 export function formatPercent(value: number) {
@@ -28,11 +60,16 @@ export function formatPercent(value: number) {
 }
 
 export function formatDate(value: string) {
+  const parsedDate = parseAssignmentDate(value);
+  if (!parsedDate) {
+    return value;
+  }
+
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
-  }).format(new Date(`${value}T12:00:00`));
+  }).format(parsedDate);
 }
 
 export function toLetterGrade(score: number) {
@@ -111,7 +148,11 @@ export function calculateCourseMetrics(course: Course): CourseMetrics {
   }
 
   const neededOnRemainingRaw =
-    remainingWeight > 0 ? ((course.targetGrade - currentPoints) / remainingWeight) * 100 : 0;
+    remainingWeight > 0
+      ? ((course.targetGrade - currentPoints) / remainingWeight) * 100
+      : course.targetGrade <= currentPoints
+        ? 0
+        : 101;
 
   const nonFinalRemainingWeight = Math.max(0, remainingWeight - course.finalExamWeight);
   const projectedNonFinalRemainingPoints = nonFinalRemainingWeight * overallAverage;
@@ -120,7 +161,9 @@ export function calculateCourseMetrics(course: Course): CourseMetrics {
       ? ((course.targetGrade - currentPoints - projectedNonFinalRemainingPoints) /
           course.finalExamWeight) *
         100
-      : 0;
+      : course.targetGrade <= currentPoints + projectedNonFinalRemainingPoints
+        ? 0
+        : 101;
 
   return {
     currentGrade: round(currentGrade),
@@ -149,26 +192,267 @@ export function explainNeededScore(value: number) {
 
 function daysUntil(dateISO: string) {
   const now = new Date();
-  const dueDate = new Date(`${dateISO}T12:00:00`);
+  const dueDate = parseAssignmentDate(dateISO);
+  if (!dueDate) {
+    return Number.POSITIVE_INFINITY;
+  }
+
   const diffMs = dueDate.getTime() - now.getTime();
   return diffMs / (1000 * 60 * 60 * 24);
 }
 
-export function calculatePriorityScore(course: Course) {
+function calculateApproximateRemainingWeight(course: Course) {
+  const byCategory = groupAssignmentsByCategory(course.assignments);
+
+  return round(
+    course.categories.reduce((sum, category) => {
+      const assignments = byCategory[category.name] ?? [];
+      if (assignments.length === 0) {
+        return sum + category.weight;
+      }
+
+      const incompleteCount = assignments.filter(
+        (assignment) => assignment.status !== "completed",
+      ).length;
+
+      if (incompleteCount === 0) {
+        return sum;
+      }
+
+      return sum + category.weight * (incompleteCount / assignments.length);
+    }, 0),
+  );
+}
+
+function calculateDueUrgency(nearestDueDays: number | null, upcomingAssignments: number) {
+  if (nearestDueDays === null || upcomingAssignments === 0) {
+    return 0;
+  }
+
+  const baseUrgency =
+    nearestDueDays <= 0
+      ? 100
+      : nearestDueDays <= 3
+        ? 92
+        : nearestDueDays <= 7
+          ? 78
+          : nearestDueDays <= 14
+            ? 58
+            : nearestDueDays <= 21
+              ? 34
+              : 18;
+
+  const workloadBump = Math.min(18, Math.max(0, upcomingAssignments - 1) * 6);
+  return clamp(baseUrgency + workloadBump, 0, 100);
+}
+
+export function getRecoveryOutlook(metrics: CourseMetrics, targetGrade: number): RecoveryOutlook {
+  const neededState = getNeededScoreState(metrics.neededOnRemaining);
+
+  if (metrics.remainingWeight <= 0) {
+    return metrics.currentPoints >= targetGrade ? "secured" : "unlikely";
+  }
+
+  if (neededState === "secured") {
+    return "secured";
+  }
+
+  if (neededState === "impossible") {
+    return "unlikely";
+  }
+
+  if (metrics.neededOnRemaining <= 75) {
+    return "comfortable";
+  }
+
+  if (metrics.neededOnRemaining <= 85) {
+    return "possible";
+  }
+
+  if (metrics.neededOnRemaining <= 92) {
+    return "tight";
+  }
+
+  return "difficult";
+}
+
+export function describeRecoveryOutlook(outlook: RecoveryOutlook) {
+  switch (outlook) {
+    case "secured":
+      return "Target already secured";
+    case "comfortable":
+      return "Target still reachable";
+    case "possible":
+      return "Possible with steady work";
+    case "tight":
+      return "Possible but tight";
+    case "difficult":
+      return "Difficult but still reachable";
+    case "unlikely":
+      return "Target is now unlikely";
+    default:
+      return "Recovery outlook unclear";
+  }
+}
+
+function calculateRiskScore(metrics: CourseMetrics, gradeGap: number, neededState: NeededScoreState) {
+  const baseRisk =
+    metrics.currentGrade < 70
+      ? 96
+      : metrics.currentGrade < 77
+        ? 84
+        : metrics.currentGrade < 83
+          ? 70
+          : metrics.currentGrade < 90
+            ? 46
+            : 22;
+
+  const targetPressure = gradeGap > 0 ? Math.min(18, gradeGap * 1.8) : 0;
+  const reachabilityPressure =
+    neededState === "impossible"
+      ? 18
+      : metrics.neededOnRemaining >= 95
+        ? 12
+        : metrics.neededOnRemaining >= 90
+          ? 8
+          : metrics.neededOnRemaining >= 85
+            ? 5
+            : 0;
+
+  return clamp(round(baseRisk + targetPressure + reachabilityPressure), 0, 100);
+}
+
+function buildPriorityReason(
+  gradeGap: number,
+  approximateRemainingWeight: number,
+  dueUrgency: number,
+  outlook: RecoveryOutlook,
+) {
+  if (outlook === "unlikely") {
+    return "below target and recovery path is narrowing";
+  }
+
+  if (gradeGap >= 10 && approximateRemainingWeight >= 20) {
+    return "well below target with enough weight left to matter";
+  }
+
+  if (dueUrgency >= 75) {
+    return "upcoming work is due soon and can still move the grade";
+  }
+
+  if (gradeGap > 0 && approximateRemainingWeight >= 10) {
+    return "below target and still recoverable";
+  }
+
+  if (gradeGap > 0) {
+    return "small gap, moderate urgency";
+  }
+
+  if (approximateRemainingWeight >= 20) {
+    return "on track, but remaining work can still swing the result";
+  }
+
+  return "on track, lower priority";
+}
+
+function buildRecommendation(
+  gradeGap: number,
+  approximateRemainingWeight: number,
+  dueUrgency: number,
+  outlook: RecoveryOutlook,
+) {
+  if (outlook === "unlikely") {
+    return "Protect the final grade by prioritizing the next high-weight assignment.";
+  }
+
+  if (dueUrgency >= 75) {
+    return "Start the nearest due assignment first to preserve recoverable points.";
+  }
+
+  if (gradeGap >= 8) {
+    return "Put focused study time here first; this is your clearest recovery need.";
+  }
+
+  if (approximateRemainingWeight >= 25) {
+    return "A strong finish here gives you one of the better payoff opportunities.";
+  }
+
+  if (gradeGap <= 0) {
+    return "Maintain pace and avoid slipping on the remaining work.";
+  }
+
+  return "Give this class a focused check-in after the highest-risk courses.";
+}
+
+export function getCourseIntelligence(course: Course): CourseIntelligence {
   const metrics = calculateCourseMetrics(course);
-  const incomplete = course.assignments.filter((assignment) => assignment.status !== "completed");
+  const assignments = getEffectiveAssignments([course]).filter(
+    (assignment) => normalizeCourseName(assignment.courseName) === normalizeCourseName(course.name),
+  );
+  const incomplete = assignments.filter((assignment) => assignment.status !== "completed");
+  const gradeGap = round(course.targetGrade - metrics.currentGrade);
+  const approximateRemainingWeight = Math.max(
+    metrics.remainingWeight,
+    calculateApproximateRemainingWeight(course),
+  );
 
-  const nearestDueDays = incomplete.length
-    ? Math.min(...incomplete.map((assignment) => daysUntil(assignment.dueDate)))
-    : 30;
+  const dueWindows = incomplete.flatMap((assignment) =>
+    assignment.dueDate ? [daysUntil(assignment.dueDate)] : [],
+  );
+  const nearestDueDays = dueWindows.length ? Math.min(...dueWindows) : null;
 
-  const dueUrgency = nearestDueDays <= 0 ? 100 : Math.max(0, 100 - nearestDueDays * 8);
+  const dueUrgency = calculateDueUrgency(nearestDueDays, incomplete.length);
+  const neededState = getNeededScoreState(metrics.neededOnRemaining);
+  const reachability = getRecoveryOutlook(metrics, course.targetGrade);
+  const gapScore = clamp(gradeGap <= 0 ? 0 : gradeGap * 5, 0, 100);
+  const opportunityScore = clamp(approximateRemainingWeight, 0, 100);
+  const riskScore = calculateRiskScore(metrics, gradeGap, neededState);
+  const payoffScore = clamp(
+    round(opportunityScore * 0.65 + course.credits * 8 + (neededState === "possible" ? 10 : 0)),
+    0,
+    100,
+  );
 
-  const gradeRisk = Math.max(0, 100 - metrics.currentGrade);
-  const remainingWorkRisk = metrics.remainingWeight;
+  let score =
+    gapScore * 0.36 + opportunityScore * 0.24 + dueUrgency * 0.2 + riskScore * 0.14 + payoffScore * 0.06;
 
-  const score = gradeRisk * 0.45 + remainingWorkRisk * 0.35 + dueUrgency * 0.2;
-  return round(score);
+  if (reachability === "secured") {
+    score -= 18;
+  } else if (reachability === "comfortable") {
+    score -= 8;
+  } else if (reachability === "tight") {
+    score += 5;
+  } else if (reachability === "difficult") {
+    score += 9;
+  } else if (reachability === "unlikely") {
+    score += 4;
+  }
+
+  const priorityScore = clamp(round(score), 0, 100);
+
+  return {
+    metrics,
+    gradeGap,
+    upcomingAssignments: incomplete.length,
+    nearestDueDays: nearestDueDays === null ? null : round(nearestDueDays, 1),
+    approximateRemainingWeight: round(approximateRemainingWeight),
+    priorityScore,
+    priorityLabel: priorityLabel(priorityScore),
+    reachability,
+    neededState,
+    reason: buildPriorityReason(gradeGap, approximateRemainingWeight, dueUrgency, reachability),
+    recommendation: buildRecommendation(
+      gradeGap,
+      approximateRemainingWeight,
+      dueUrgency,
+      reachability,
+    ),
+    payoffScore,
+  };
+}
+
+export function calculatePriorityScore(course: Course) {
+  return getCourseIntelligence(course).priorityScore;
 }
 
 export function priorityLabel(score: number): "High" | "Medium" | "Low" {

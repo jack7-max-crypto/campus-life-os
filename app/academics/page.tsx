@@ -1,31 +1,30 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, MetricRow } from "@/components/ui/card";
+import { parseCanvasDueDate } from "@/lib/academics/dates";
+import {
+  getCurrentEffectiveAssignments,
+  type EffectiveAssignment,
+} from "@/lib/academics/getEffectiveAssignments";
 import { mockCourses } from "@/lib/academics/mockData";
-import { Assignment, AssignmentStatus, Course, GradeCategory } from "@/lib/academics/types";
+import { AssignmentStatus, Course, GradeCategory } from "@/lib/academics/types";
+import {
+  markCanvasAcademicAssignmentCompleteInStorage,
+  useCanvasImportSnapshot,
+} from "@/lib/integrations/canvas/store";
+import { recordTaskCompletion } from "@/lib/streak";
 import {
   calculateCourseMetrics,
-  calculatePriorityScore,
+  describeRecoveryOutlook,
   explainNeededScore,
-  formatAssignmentScore,
   formatDate,
   formatPercent,
+  getCourseIntelligence,
   getNeededScoreState,
-  priorityLabel,
   statusLabel,
   toLetterGrade,
 } from "@/lib/academics/utils";
-
-type AssignmentDraft = {
-  id?: string;
-  name: string;
-  category: string;
-  scoreEarned: string;
-  scorePossible: string;
-  dueDate: string;
-  status: AssignmentStatus;
-};
 
 type CategoryDraft = {
   name: string;
@@ -41,38 +40,65 @@ type CourseDraft = {
   categories: CategoryDraft[];
 };
 
-const statusClasses: Record<string, string> = {
-  completed: "bg-emerald-100 text-emerald-800",
-  "in-progress": "bg-amber-100 text-amber-800",
-  "not-started": "bg-slate-200 text-slate-700",
-};
+type ActiveTab = "tasks" | "progress";
 
 const neededStateClasses: Record<string, string> = {
-  secured: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  possible: "bg-blue-100 text-blue-800 border-blue-200",
-  impossible: "bg-rose-100 text-rose-800 border-rose-200",
+  secured: "border border-emerald-500/18 bg-emerald-500/10 text-emerald-100",
+  possible: "border border-white/[0.08] bg-white/[0.06] text-white/75",
+  impossible: "border border-rose-500/18 bg-rose-500/10 text-rose-100",
 };
 
 const ACADEMICS_STORAGE_KEY = "campus-life-os.academics.v1";
 const seedCourses = mockCourses;
-const demoSeedCourses = mockCourses;
 
 const priorityClasses: Record<string, string> = {
-  High: "bg-rose-100 text-rose-700",
-  Medium: "bg-amber-100 text-amber-700",
-  Low: "bg-emerald-100 text-emerald-700",
+  High: "border border-rose-500/18 bg-rose-500/10 text-rose-100",
+  Medium: "border border-amber-500/18 bg-amber-500/10 text-amber-100",
+  Low: "border border-white/[0.08] bg-white/[0.06] text-white/75",
 };
-
-function createEmptyAssignmentDraft(defaultCategory: string): AssignmentDraft {
-  return {
-    name: "",
-    category: defaultCategory,
-    scoreEarned: "",
-    scorePossible: "",
-    dueDate: "",
-    status: "not-started",
-  };
-}
+const recoveryClasses: Record<string, string> = {
+  secured: "border border-emerald-500/18 bg-emerald-500/10 text-emerald-100",
+  comfortable: "border border-sky-500/18 bg-sky-500/10 text-sky-100",
+  possible: "border border-white/[0.08] bg-white/[0.06] text-white/75",
+  tight: "border border-amber-500/18 bg-amber-500/10 text-amber-100",
+  difficult: "border border-orange-500/18 bg-orange-500/10 text-orange-100",
+  unlikely: "border border-rose-500/18 bg-rose-500/10 text-rose-100",
+};
+const checklistGroupBadgeClasses = {
+  overdue: "border border-rose-500/18 bg-rose-500/10 text-rose-100",
+  today: "border border-amber-500/18 bg-amber-500/10 text-amber-100",
+  tomorrow: "border border-sky-500/18 bg-sky-500/10 text-sky-100",
+  thisWeek: "border border-white/[0.08] bg-white/[0.06] text-white/78",
+  later: "border border-white/[0.08] bg-white/[0.04] text-white/68",
+  noDueDate: "border border-white/[0.08] bg-white/[0.06] text-white/75",
+} as const;
+const checklistRowClasses = {
+  overdue:
+    "border-rose-500/20 bg-gradient-to-r from-rose-500/10 via-rose-500/4 to-transparent",
+  today:
+    "border-amber-500/20 bg-gradient-to-r from-amber-500/10 via-amber-500/4 to-transparent",
+  tomorrow:
+    "border-sky-500/20 bg-gradient-to-r from-sky-500/10 via-sky-500/4 to-transparent",
+  thisWeek:
+    "border-white/[0.08] bg-gradient-to-r from-white/[0.06] via-white/[0.03] to-transparent",
+  later:
+    "border-white/[0.06] bg-gradient-to-r from-white/[0.04] via-white/[0.02] to-transparent",
+  noDueDate:
+    "border-white/[0.08] bg-gradient-to-r from-white/[0.06] via-white/[0.03] to-transparent",
+} as const;
+const fieldClassName =
+  "system-input mt-1 px-3 py-2 text-sm";
+const compactFieldClassName =
+  "system-input px-3 py-2 text-sm";
+const mutedLabelClassName = "system-label text-white/45";
+const primaryButtonClassName =
+  "system-button-primary px-3 py-2 text-sm font-semibold";
+const secondaryButtonClassName =
+  "system-button-secondary px-3 py-2 text-sm font-medium";
+const subtleButtonClassName =
+  "system-button-subtle px-3 py-1.5 text-xs font-semibold";
+const noteSurfaceClassName =
+  "system-subtle-panel system-card-interactive rounded-[14px] px-3 py-2 text-sm text-white/70";
 
 function createEmptyCourseDraft(): CourseDraft {
   return {
@@ -143,55 +169,333 @@ function percentageToGpa(percent: number, scale: GpaScale): number {
 function formatGpa(value: number): string {
   return (Math.round(value * 100) / 100).toFixed(2);
 }
+
+function formatGapSummary(gap: number): string {
+  if (gap > 0) return `${formatPercent(gap)} behind`;
+  if (gap < 0) return `${formatPercent(Math.abs(gap))} ahead`;
+  return "On target";
+}
+
+function formatDueWindow(days: number | null): string {
+  if (days === null) return "No upcoming assignments";
+  if (days <= 0) return "Work is already due";
+
+  const roundedDays = Math.ceil(days);
+  return roundedDays === 1 ? "Next due in 1 day" : `Next due in ${roundedDays} days`;
+}
+
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
+const CHECKLIST_THIS_WEEK_MAX_DAY_OFFSET = 7;
+const CHECKLIST_COMPLETION_ANIMATION_MS = 180;
+const DATE_ONLY_VALUE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+type AssignmentChecklistGroupKey =
+  | "overdue"
+  | "today"
+  | "tomorrow"
+  | "thisWeek"
+  | "later"
+  | "noDueDate";
+
+type AssignmentChecklistGroup = {
+  key: AssignmentChecklistGroupKey;
+  title: string;
+  description: string;
+  accentClassName: string;
+  items: EffectiveAssignment[];
+};
+
+function toAcademicAssignmentStatus(
+  status: EffectiveAssignment["status"],
+): AssignmentStatus {
+  switch (status) {
+    case "completed":
+      return "completed";
+    case "in_progress":
+      return "in-progress";
+    case "not_started":
+    default:
+      return "not-started";
+  }
+}
+
+function getNormalizedChecklistDueDate(dueDate: string | null) {
+  return parseCanvasDueDate(dueDate);
+}
+
+function getLocalCalendarDayIndex(date: Date) {
+  return Math.floor(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / DAY_IN_MS);
+}
+
+function getChecklistGroupingDecision(
+  assignment: EffectiveAssignment,
+  now: Date,
+): AssignmentChecklistGroupKey {
+  const parsedDueDate = getNormalizedChecklistDueDate(assignment.dueDate);
+
+  if (!parsedDueDate) {
+    return "noDueDate";
+  }
+
+  const dayDifference = getLocalCalendarDayIndex(parsedDueDate) - getLocalCalendarDayIndex(now);
+
+  if (dayDifference < 0) {
+    return "overdue";
+  }
+
+  return dayDifference === 0
+    ? "today"
+    : dayDifference === 1
+      ? "tomorrow"
+      : dayDifference <= CHECKLIST_THIS_WEEK_MAX_DAY_OFFSET
+        ? "thisWeek"
+        : "later";
+}
+
+function compareChecklistAssignments(a: EffectiveAssignment, b: EffectiveAssignment) {
+  const dueDifference =
+    (getNormalizedChecklistDueDate(a.dueDate)?.getTime() ?? Number.POSITIVE_INFINITY) -
+    (getNormalizedChecklistDueDate(b.dueDate)?.getTime() ?? Number.POSITIVE_INFINITY);
+  if (dueDifference !== 0) {
+    return dueDifference;
+  }
+
+  const statusDifference = getAssignmentStatusPriority(b.status) - getAssignmentStatusPriority(a.status);
+  if (statusDifference !== 0) {
+    return statusDifference;
+  }
+
+  const courseDifference = a.courseName.localeCompare(b.courseName);
+  if (courseDifference !== 0) {
+    return courseDifference;
+  }
+
+  return a.title.localeCompare(b.title);
+}
+
+function getAssignmentStatusPriority(status: EffectiveAssignment["status"]) {
+  switch (status) {
+    case "not_started":
+      return 2;
+    case "in_progress":
+      return 1;
+    case "completed":
+    default:
+      return 0;
+  }
+}
+
+function getChecklistStatusClassName(status: EffectiveAssignment["status"]) {
+  switch (status) {
+    case "in_progress":
+      return checklistGroupBadgeClasses.today;
+    case "completed":
+      return "border border-emerald-500/18 bg-emerald-500/10 text-emerald-100";
+    case "not_started":
+    default:
+      return "border border-white/[0.08] bg-white/[0.06] text-white/72";
+  }
+}
+
+function formatChecklistDueDate(dueDate: string | null) {
+  if (!dueDate) {
+    return "No due date";
+  }
+
+  const parsedDueDate = getNormalizedChecklistDueDate(dueDate);
+  if (!parsedDueDate) {
+    return formatDate(dueDate);
+  }
+
+  const now = new Date();
+  const dayDifference = getLocalCalendarDayIndex(parsedDueDate) - getLocalCalendarDayIndex(now);
+  const hasExplicitTime = !DATE_ONLY_VALUE_PATTERN.test(dueDate.trim());
+  const dateLabel =
+    dayDifference === 0
+      ? "today"
+      : dayDifference === 1
+        ? "tomorrow"
+        : new Intl.DateTimeFormat("en-US", {
+            month: "short",
+            day: "numeric",
+            ...(parsedDueDate.getFullYear() === now.getFullYear() ? {} : { year: "numeric" }),
+          }).format(parsedDueDate);
+
+  if (!hasExplicitTime) {
+    return dateLabel;
+  }
+
+  const timeLabel = new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(parsedDueDate);
+
+  return `${dateLabel} at ${timeLabel}`;
+}
+
+function getChecklistAssignmentKey(assignment: EffectiveAssignment) {
+  return `${assignment.source}-${assignment.id}`;
+}
+
+function TabButton({
+  label,
+  tab,
+  activeTab,
+  onClick,
+}: {
+  label: string;
+  tab: ActiveTab;
+  activeTab: ActiveTab;
+  onClick: (tab: ActiveTab) => void;
+}) {
+  const isActive = activeTab === tab;
+
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={isActive}
+      className={`rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200 ${
+        isActive
+          ? "bg-white text-black shadow-[0_10px_26px_rgba(0,0,0,0.35)]"
+          : "text-white/55 hover:bg-white/[0.04] hover:text-white"
+      }`}
+      onClick={() => onClick(tab)}
+    >
+      {label}
+    </button>
+  );
+}
+
 export default function AcademicsPage() {
   const [courses, setCourses] = useState<Course[]>(seedCourses);
+  const [activeTab, setActiveTab] = useState<ActiveTab>("tasks");
   const [hasHydrated, setHasHydrated] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState(seedCourses[0]?.id ?? "");
-  const [assignmentCourseFilter, setAssignmentCourseFilter] = useState<string>("all");
-  const [assignmentDraft, setAssignmentDraft] = useState<AssignmentDraft | null>(null);
-  const [isEditAssignmentMode, setIsEditAssignmentMode] = useState(false);
   const [courseDraft, setCourseDraft] = useState<CourseDraft | null>(null);
   const [isEditCourseMode, setIsEditCourseMode] = useState(false);
   const [courseFormError, setCourseFormError] = useState<string | null>(null);
   const [gpaScale, setGpaScale] = useState<GpaScale>("seven_point");
   const [whatIfGrade, setWhatIfGrade] = useState("");
+  const [completingAssignmentKeys, setCompletingAssignmentKeys] = useState<string[]>([]);
+  const completionTimeoutIdsRef = useRef<Map<string, number>>(new Map());
+  const { snapshot: canvasSnapshot } = useCanvasImportSnapshot();
   const selectedCourse = useMemo(
     () => courses.find((course) => course.id === selectedCourseId) ?? courses[0],
     [courses, selectedCourseId],
   );
 
-  const metrics = useMemo(
-    () => (selectedCourse ? calculateCourseMetrics(selectedCourse) : null),
-    [selectedCourse],
-  );
-
-  const remainingState = metrics ? getNeededScoreState(metrics.neededOnRemaining) : "possible";
-  const finalState = metrics ? getNeededScoreState(metrics.neededOnFinal) : "possible";
-
-  const coursePriorities = useMemo(() => {
+  const courseInsights = useMemo(() => {
     return [...courses]
       .map((course) => {
-        const score = calculatePriorityScore(course);
         return {
           course,
-          score,
-          label: priorityLabel(score),
+          ...getCourseIntelligence(course),
         };
       })
-      .sort((a, b) => b.score - a.score);
+      .sort(
+        (a, b) =>
+          b.priorityScore - a.priorityScore ||
+          b.payoffScore - a.payoffScore ||
+          a.metrics.currentGrade - b.metrics.currentGrade,
+      );
   }, [courses]);
 
-  const allAssignments = useMemo(() => courses.flatMap((course) => course.assignments), [courses]);
+  const selectedCourseInsight = useMemo(
+    () => courseInsights.find((course) => course.course.id === selectedCourseId) ?? null,
+    [courseInsights, selectedCourseId],
+  );
 
-  const filteredAssignments = useMemo(() => {
-    if (assignmentCourseFilter === "all") {
-      return allAssignments;
+  const metrics = useMemo(
+    () => selectedCourseInsight?.metrics ?? (selectedCourse ? calculateCourseMetrics(selectedCourse) : null),
+    [selectedCourse, selectedCourseInsight],
+  );
+
+  const remainingState = selectedCourseInsight?.neededState ?? "possible";
+  const finalState = metrics ? getNeededScoreState(metrics.neededOnFinal) : "possible";
+  const effectiveAssignments = useMemo(() => {
+    if (!mounted) {
+      return [];
     }
-    return allAssignments.filter((assignment) => assignment.courseId === assignmentCourseFilter);
-  }, [allAssignments, assignmentCourseFilter]);
+
+    return getCurrentEffectiveAssignments(courses, canvasSnapshot);
+  }, [canvasSnapshot, courses, mounted]);
+  const checklistGrouping = useMemo(() => {
+    const now = new Date();
+    const groupedAssignments: Record<AssignmentChecklistGroupKey, EffectiveAssignment[]> = {
+      overdue: [],
+      today: [],
+      tomorrow: [],
+      thisWeek: [],
+      later: [],
+      noDueDate: [],
+    };
+
+    effectiveAssignments
+      .filter((assignment) => assignment.status !== "completed")
+      .slice()
+      .sort(compareChecklistAssignments)
+      .forEach((assignment) => {
+        const bucket = getChecklistGroupingDecision(assignment, now);
+        groupedAssignments[bucket].push(assignment);
+      });
+
+    return {
+      groups: [
+        {
+          key: "overdue",
+          title: "Overdue",
+          description: "Past due and still open",
+          accentClassName: checklistGroupBadgeClasses.overdue,
+          items: groupedAssignments.overdue,
+        },
+        {
+          key: "today",
+          title: "Today",
+          description: "Due on your local calendar today",
+          accentClassName: checklistGroupBadgeClasses.today,
+          items: groupedAssignments.today,
+        },
+        {
+          key: "tomorrow",
+          title: "Tomorrow",
+          description: "Due on your local calendar tomorrow",
+          accentClassName: checklistGroupBadgeClasses.tomorrow,
+          items: groupedAssignments.tomorrow,
+        },
+        {
+          key: "thisWeek",
+          title: "This Week",
+          description: "Due in 2 to 7 calendar days",
+          accentClassName: checklistGroupBadgeClasses.thisWeek,
+          items: groupedAssignments.thisWeek,
+        },
+        {
+          key: "later",
+          title: "Later",
+          description: "Due more than 7 calendar days out",
+          accentClassName: checklistGroupBadgeClasses.later,
+          items: groupedAssignments.later,
+        },
+        {
+          key: "noDueDate",
+          title: "No Due Date",
+          description: "Incomplete work without a usable due date",
+          accentClassName: checklistGroupBadgeClasses.noDueDate,
+          items: groupedAssignments.noDueDate,
+        },
+      ] satisfies AssignmentChecklistGroup[],
+    };
+  }, [effectiveAssignments]);
+  const checklistGroups = checklistGrouping.groups;
+  const incompleteChecklistCount = useMemo(
+    () => checklistGroups.reduce((sum, group) => sum + group.items.length, 0),
+    [checklistGroups],
+  );
+
   const courseGpaRows = useMemo(() => {
-    return courses.map((course) => {
-      const courseMetrics = calculateCourseMetrics(course);
+    return courseInsights.map(({ course, metrics: courseMetrics }) => {
       const currentPercent = courseMetrics.currentGrade;
       const projectedPercent = courseMetrics.projectedGrade;
 
@@ -204,28 +508,30 @@ export default function AcademicsPage() {
         projectedGpa: percentageToGpa(projectedPercent, gpaScale),
       };
     });
-  }, [courses, gpaScale]);
+  }, [courseInsights, gpaScale]);
+
+  const totalCredits = useMemo(
+    () => courseGpaRows.reduce((sum, row) => sum + row.credits, 0),
+    [courseGpaRows],
+  );
 
   const currentGpa = useMemo(() => {
-    const totalCredits = courseGpaRows.reduce((sum, row) => sum + row.credits, 0);
     if (totalCredits === 0) return 0;
 
     return (
       courseGpaRows.reduce((sum, row) => sum + row.currentGpa * row.credits, 0) / totalCredits
     );
-  }, [courseGpaRows]);
+  }, [courseGpaRows, totalCredits]);
 
   const projectedGpa = useMemo(() => {
-    const totalCredits = courseGpaRows.reduce((sum, row) => sum + row.credits, 0);
     if (totalCredits === 0) return 0;
 
     return (
       courseGpaRows.reduce((sum, row) => sum + row.projectedGpa * row.credits, 0) / totalCredits
     );
-  }, [courseGpaRows]);
+  }, [courseGpaRows, totalCredits]);
 
   const whatIfProjectedGpa = useMemo(() => {
-    const totalCredits = courses.reduce((sum, course) => sum + course.credits, 0);
     if (totalCredits === 0) return 0;
 
     const parsedWhatIf = whatIfGrade.trim() === "" ? null : Number(whatIfGrade);
@@ -241,17 +547,40 @@ export default function AcademicsPage() {
         return sum + percentageToGpa(projectedPercent, gpaScale) * course.credits;
       }, 0) / totalCredits
     );
-  }, [courses, gpaScale, selectedCourse.id, whatIfGrade]);
+  }, [courses, gpaScale, selectedCourse.id, totalCredits, whatIfGrade]);
 
-  const bestImpactCourse = useMemo(() => {
+  const bestGpaUpside = useMemo(() => {
     if (courseGpaRows.length === 0) return null;
-    return [...courseGpaRows].sort((a, b) => b.projectedGpa - a.projectedGpa)[0];
+    return [...courseGpaRows]
+      .map((row) => {
+        const courseInsight = courseInsights.find((item) => item.course.id === row.course.id);
+        const targetGpa = percentageToGpa(Math.min(100, row.course.targetGrade), gpaScale);
+        const overallDelta = ((targetGpa - row.projectedGpa) * row.credits) / totalCredits;
+
+        return {
+          ...row,
+          overallDelta,
+          reachable: courseInsight?.reachability !== "unlikely",
+        };
+      })
+      .filter((row) => row.overallDelta > 0)
+      .sort(
+        (a, b) =>
+          Number(b.reachable) - Number(a.reachable) || b.overallDelta - a.overallDelta,
+      )[0];
+  }, [courseGpaRows, courseInsights, gpaScale, totalCredits]);
+
+  const weakestDragCourse = useMemo(() => {
+    if (courseGpaRows.length === 0) return null;
+    return [...courseGpaRows].sort(
+      (a, b) => a.currentPercent - b.currentPercent || b.credits - a.credits,
+    )[0];
   }, [courseGpaRows]);
 
-  const worstImpactCourse = useMemo(() => {
-    if (courseGpaRows.length === 0) return null;
-    return [...courseGpaRows].sort((a, b) => a.projectedGpa - b.projectedGpa)[0];
-  }, [courseGpaRows]);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(ACADEMICS_STORAGE_KEY);
@@ -277,78 +606,14 @@ export default function AcademicsPage() {
     window.localStorage.setItem(ACADEMICS_STORAGE_KEY, JSON.stringify(courses));
   }, [courses, hasHydrated]);
 
-  const openAddAssignment = () => {
-    if (!selectedCourse) return;
-    const defaultCategory = selectedCourse.categories[0]?.name ?? "";
-    setAssignmentDraft(createEmptyAssignmentDraft(defaultCategory));
-    setIsEditAssignmentMode(false);
-  };
+  useEffect(() => {
+    const timeoutIds = completionTimeoutIdsRef.current;
 
-  const openEditAssignment = (assignment: Assignment) => {
-    setAssignmentDraft({
-      id: assignment.id,
-      name: assignment.name,
-      category: assignment.category,
-      scoreEarned:
-        assignment.scoreEarned === null || assignment.scoreEarned === undefined
-          ? ""
-          : String(assignment.scoreEarned),
-      scorePossible:
-        assignment.scorePossible === null || assignment.scorePossible === undefined
-          ? ""
-          : String(assignment.scorePossible),
-      dueDate: assignment.dueDate,
-      status: assignment.status,
-    });
-    setIsEditAssignmentMode(true);
-  };
-
-  const closeAssignmentDraft = () => {
-    setAssignmentDraft(null);
-    setIsEditAssignmentMode(false);
-  };
-
-  const saveAssignmentDraft = () => {
-    if (!assignmentDraft || !selectedCourse || !assignmentDraft.name.trim()) return;
-
-    const scoreEarned =
-      assignmentDraft.scoreEarned.trim() === "" ? null : Number(assignmentDraft.scoreEarned);
-    const scorePossible =
-      assignmentDraft.scorePossible.trim() === "" ? null : Number(assignmentDraft.scorePossible);
-
-    const normalized: Assignment = {
-      id: assignmentDraft.id ?? `${selectedCourse.id}-${Date.now()}`,
-      courseId: selectedCourse.id,
-      name: assignmentDraft.name.trim(),
-      category: assignmentDraft.category,
-      dueDate: assignmentDraft.dueDate || new Date().toISOString().slice(0, 10),
-      status: assignmentDraft.status,
-      scoreEarned: Number.isFinite(scoreEarned) ? scoreEarned : null,
-      scorePossible: Number.isFinite(scorePossible) ? scorePossible : null,
+    return () => {
+      timeoutIds.forEach((timeoutId) => window.clearTimeout(timeoutId));
+      timeoutIds.clear();
     };
-
-    setCourses((prev) =>
-      prev.map((course) => {
-        if (course.id !== selectedCourse.id) return course;
-
-        if (isEditAssignmentMode && assignmentDraft.id) {
-          return {
-            ...course,
-            assignments: course.assignments.map((assignment) =>
-              assignment.id === assignmentDraft.id ? normalized : assignment,
-            ),
-          };
-        }
-
-        return {
-          ...course,
-          assignments: [...course.assignments, normalized],
-        };
-      }),
-    );
-
-    closeAssignmentDraft();
-  };
+  }, []);
 
   const updateTargetGrade = (value: string) => {
     if (!selectedCourse) return;
@@ -482,18 +747,69 @@ export default function AcademicsPage() {
       return next;
     });
 
-    setAssignmentCourseFilter("all");
-    closeAssignmentDraft();
     closeCourseDraft();
   };
 
-  const resetDemoData = () => {
-    setCourses(demoSeedCourses);
-    setSelectedCourseId(demoSeedCourses[0]?.id ?? "");
-    setAssignmentCourseFilter("all");
-    closeAssignmentDraft();
-    closeCourseDraft();
-    window.localStorage.removeItem(ACADEMICS_STORAGE_KEY);
+  const commitChecklistAssignmentComplete = (assignment: EffectiveAssignment) => {
+    if (assignment.status === "completed") {
+      return;
+    }
+
+    if (assignment.source === "canvas") {
+      const didUpdate = markCanvasAcademicAssignmentCompleteInStorage(assignment.id);
+      if (didUpdate) {
+        recordTaskCompletion();
+      }
+      return;
+    }
+
+    let hasUpdated = false;
+    const nextCourses = courses.map((course) => {
+      if (course.id !== assignment.courseId) {
+        return course;
+      }
+
+      return {
+        ...course,
+        assignments: course.assignments.map((courseAssignment) => {
+          if (courseAssignment.id !== assignment.sourceId || courseAssignment.status === "completed") {
+            return courseAssignment;
+          }
+
+          hasUpdated = true;
+          return {
+            ...courseAssignment,
+            status: "completed" as const,
+          };
+        }),
+      };
+    });
+
+    if (hasUpdated) {
+      setCourses(nextCourses);
+      recordTaskCompletion();
+    }
+  };
+
+  const markChecklistAssignmentComplete = (assignment: EffectiveAssignment) => {
+    if (assignment.status === "completed") {
+      return;
+    }
+
+    const assignmentKey = getChecklistAssignmentKey(assignment);
+    if (completionTimeoutIdsRef.current.has(assignmentKey)) {
+      return;
+    }
+
+    setCompletingAssignmentKeys((prev) => [...prev, assignmentKey]);
+
+    const timeoutId = window.setTimeout(() => {
+      completionTimeoutIdsRef.current.delete(assignmentKey);
+      commitChecklistAssignmentComplete(assignment);
+      setCompletingAssignmentKeys((prev) => prev.filter((key) => key !== assignmentKey));
+    }, CHECKLIST_COMPLETION_ANIMATION_MS);
+
+    completionTimeoutIdsRef.current.set(assignmentKey, timeoutId);
   };
 
   const renderNeededValue = (value: number) => {
@@ -506,19 +822,19 @@ export default function AcademicsPage() {
     return (
       <div className="space-y-4 sm:space-y-6">
         <section>
-          <h2 className="text-2xl font-semibold tracking-tight">Academics</h2>
-          <p className="mt-1 text-sm text-slate-500">No courses yet. Add your first course.</p>
+          <h2 className="text-2xl font-semibold tracking-tight text-white">Academics</h2>
+          <p className="mt-1 text-sm text-white/50">No courses yet. Add your first course.</p>
         </section>
         <button
           onClick={openAddCourse}
-          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+          className={primaryButtonClassName}
         >
           Add course
         </button>
 
         {courseDraft ? (
           <Card title="Add course" subtitle="Create your course setup">
-            <p className="text-sm text-slate-600">Complete course details and save.</p>
+            <p className="text-sm text-white/50">Complete course details and save.</p>
           </Card>
         ) : null}
       </div>
@@ -526,529 +842,523 @@ export default function AcademicsPage() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <section className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div className="animate-fadeIn space-y-5 sm:space-y-6 lg:space-y-7">
+      <section className="space-y-1.5">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Academics</h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <h2 className="text-[1.75rem] font-semibold tracking-tight text-white sm:text-2xl">
+            Academics
+          </h2>
+          <p className="mt-1 text-sm text-white/50">
             Interactive grade planning for your current semester.
           </p>
         </div>
-
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-          <label className="text-xs text-slate-500">
-            Select course
-            <select
-              value={selectedCourse.id}
-              onChange={(event) => setSelectedCourseId(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 sm:min-w-56"
-            >
-              {courses.map((course) => (
-                <option key={course.id} value={course.id}>
-                  {course.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-xs text-slate-500">
-            Target grade
-            <input
-              type="number"
-              min={0}
-              max={100}
-              step="0.1"
-              value={selectedCourse.targetGrade}
-              onChange={(event) => updateTargetGrade(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 sm:w-36"
-            />
-          </label>
+        <div
+          role="tablist"
+          aria-label="Academics views"
+          className="system-subtle-panel mt-4 inline-flex rounded-[18px] p-1"
+        >
+          <TabButton
+            label="Tasks"
+            tab="tasks"
+            activeTab={activeTab}
+            onClick={setActiveTab}
+          />
+          <TabButton
+            label="Progress"
+            tab="progress"
+            activeTab={activeTab}
+            onClick={setActiveTab}
+          />
         </div>
       </section>
 
-      <section className="flex flex-wrap gap-2">
-        <button
-          onClick={openAddCourse}
-          className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-700"
-        >
-          Add course
-        </button>
-        <button
-          onClick={openEditCourse}
-          className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
-        >
-          Edit course
-        </button>
-        <button
-          onClick={deleteSelectedCourse}
-          className="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50"
-        >
-          Delete course
-        </button>
-      </section>
-
-      {courseDraft ? (
-        <Card
-          title={isEditCourseMode ? "Edit course" : "Add course"}
-          subtitle="Manage course details and grading structure"
-        >
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="text-xs text-slate-500">
-              Course name
-              <input
-                value={courseDraft.name}
-                onChange={(event) =>
-                  setCourseDraft((prev) => (prev ? { ...prev, name: event.target.value } : prev))
-                }
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700"
-              />
-            </label>
-
-            <label className="text-xs text-slate-500">
-              Credits
-              <input
-                type="number"
-                min={0}
-                value={courseDraft.credits}
-                onChange={(event) =>
-                  setCourseDraft((prev) =>
-                    prev ? { ...prev, credits: event.target.value } : prev,
-                  )
-                }
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700"
-              />
-            </label>
-
-            <label className="text-xs text-slate-500">
-              Target grade
-              <input
-                type="number"
-                min={0}
-                max={100}
-                value={courseDraft.targetGrade}
-                onChange={(event) =>
-                  setCourseDraft((prev) =>
-                    prev ? { ...prev, targetGrade: event.target.value } : prev,
-                  )
-                }
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700"
-              />
-            </label>
-
-            <label className="text-xs text-slate-500">
-              Final exam weight %
-              <input
-                type="number"
-                min={0}
-                max={100}
-                value={courseDraft.finalExamWeight}
-                onChange={(event) =>
-                  setCourseDraft((prev) =>
-                    prev ? { ...prev, finalExamWeight: event.target.value } : prev,
-                  )
-                }
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700"
-              />
-            </label>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Grading categories
-              </p>
-              <button
-                onClick={addCategoryDraft}
-                className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
-              >
-                Add category
-              </button>
+      {activeTab === "tasks" ? (
+        <>
+          <Card
+            title="Assignment Checklist"
+            subtitle={
+              canvasSnapshot.status === "ready"
+                ? "Calendar-day grouped across manual and Canvas current-course assignments"
+                : "Calendar-day grouped current-course assignments"
+            }
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="system-pill px-3 py-1 text-xs font-semibold text-white/75">
+                {incompleteChecklistCount} open
+              </span>
+              {canvasSnapshot.status === "ready" ? (
+                <span className="inline-flex rounded-full border border-sky-500/18 bg-sky-500/10 px-3 py-1 text-xs font-semibold text-sky-100">
+                  Canvas synced
+                </span>
+              ) : null}
             </div>
 
-            {courseDraft.categories.map((category, index) => (
-              <div key={`${index}-${category.name}`} className="grid gap-2 sm:grid-cols-[1fr_120px_auto]">
-                <input
-                  placeholder="Category name"
-                  value={category.name}
-                  onChange={(event) => updateCategoryDraft(index, "name", event.target.value)}
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700"
-                />
+            <div className="space-y-3">
+              {checklistGroups.map((group) => (
+                <section key={group.key} className="space-y-2">
+                  <div className="rounded-2xl border border-white/[0.05] bg-white/[0.02] px-3 py-3">
+                    <p className="system-label text-white/32">Assignment Lane</p>
+                    <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-sm font-semibold text-white">{group.title}</h4>
+                        <span
+                          className={`inline-flex rounded-full px-2 py-1 text-[11px] font-semibold ${group.accentClassName}`}
+                        >
+                          {group.items.length}
+                        </span>
+                      </div>
+                      <p className="text-xs text-white/46">{group.description}</p>
+                    </div>
+                  </div>
+
+                  {group.items.length > 0 ? (
+                    <div className="space-y-2">
+                      {group.items.map((assignment) => {
+                        const assignmentKey = getChecklistAssignmentKey(assignment);
+                        const isCompleting = completingAssignmentKeys.includes(assignmentKey);
+
+                        return (
+                          <div
+                            key={assignmentKey}
+                            className={`origin-top overflow-hidden transition-all duration-200 ease-out motion-reduce:transition-none ${
+                              isCompleting
+                                ? "pointer-events-none max-h-0 scale-[0.985] opacity-0"
+                                : "max-h-48 opacity-100"
+                            }`}
+                          >
+                            <div
+                              className={`system-subtle-panel rounded-2xl border px-3 py-3 shadow-[0_18px_44px_rgba(0,0,0,0.42)] ${checklistRowClasses[group.key]}`}
+                            >
+                              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="flex min-w-0 items-start gap-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => markChecklistAssignmentComplete(assignment)}
+                                    disabled={isCompleting}
+                                    className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/[0.12] bg-black/40 text-xs font-bold text-white transition-all duration-200 hover:border-white/[0.22] hover:bg-white/[0.08] disabled:cursor-default disabled:opacity-60 active:scale-[0.96]"
+                                    aria-label={`Mark ${assignment.title} complete`}
+                                  >
+                                    ✓
+                                  </button>
+
+                                  <div className="min-w-0">
+                                    <p className="truncate text-sm font-semibold text-white">
+                                      {assignment.title}
+                                    </p>
+                                    <p className="mt-1 text-xs text-white/56">{assignment.courseName}</p>
+                                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-white/60">
+                                      <span>Due {formatChecklistDueDate(assignment.dueDate)}</span>
+                                      <span className="text-white/28">•</span>
+                                      <span
+                                        className={`inline-flex rounded-full px-2 py-1 text-[11px] font-semibold ${getChecklistStatusClassName(assignment.status)}`}
+                                      >
+                                        {statusLabel(toAcademicAssignmentStatus(assignment.status))}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="flex shrink-0 items-center gap-2">
+                                  {assignment.htmlUrl ? (
+                                    <a
+                                      href={assignment.htmlUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="system-button-secondary px-3 py-2 text-xs font-medium"
+                                    >
+                                      Open
+                                    </a>
+                                  ) : null}
+                                  <button
+                                    type="button"
+                                    onClick={() => markChecklistAssignmentComplete(assignment)}
+                                    disabled={isCompleting}
+                                    className={secondaryButtonClassName}
+                                  >
+                                    {isCompleting ? "Completing..." : "Mark complete"}
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-white/[0.06] bg-black/30 px-3 py-3 text-sm text-white/50">
+                      No {group.title.toLowerCase()} assignments.
+                    </div>
+                  )}
+                </section>
+              ))}
+            </div>
+          </Card>
+
+        </>
+      ) : (
+        <>
+          <section className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+              <label className={mutedLabelClassName}>
+                Select course
+                <select
+                  value={selectedCourse.id}
+                  onChange={(event) => setSelectedCourseId(event.target.value)}
+                  className={`${fieldClassName} sm:min-w-56`}
+                >
+                  {courses.map((course) => (
+                    <option key={course.id} value={course.id}>
+                      {course.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className={mutedLabelClassName}>
+                Target grade
                 <input
                   type="number"
                   min={0}
                   max={100}
-                  placeholder="Weight"
-                  value={category.weight}
-                  onChange={(event) => updateCategoryDraft(index, "weight", event.target.value)}
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700"
+                  step="0.1"
+                  value={selectedCourse.targetGrade}
+                  onChange={(event) => updateTargetGrade(event.target.value)}
+                  className={`${fieldClassName} sm:w-36`}
                 />
-                <button
-                  onClick={() => removeCategoryDraft(index)}
-                  className="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50"
-                >
-                  Remove
+              </label>
+            </div>
+          </section>
+
+          <section className="flex flex-wrap gap-2">
+            <button onClick={openAddCourse} className={subtleButtonClassName}>
+              Add course
+            </button>
+            <button onClick={openEditCourse} className={subtleButtonClassName}>
+              Edit course
+            </button>
+            <button onClick={deleteSelectedCourse} className="rounded-lg border border-rose-500/18 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-100 transition-all duration-200 hover:bg-rose-500/14 active:scale-[0.98]">
+              Delete course
+            </button>
+          </section>
+
+          {courseDraft ? (
+            <Card
+              title={isEditCourseMode ? "Edit course" : "Add course"}
+              subtitle="Manage course details and grading structure"
+            >
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className={mutedLabelClassName}>
+                  Course name
+                  <input
+                    value={courseDraft.name}
+                    onChange={(event) =>
+                      setCourseDraft((prev) => (prev ? { ...prev, name: event.target.value } : prev))
+                    }
+                    className={fieldClassName}
+                  />
+                </label>
+
+                <label className={mutedLabelClassName}>
+                  Credits
+                  <input
+                    type="number"
+                    min={0}
+                    value={courseDraft.credits}
+                    onChange={(event) =>
+                      setCourseDraft((prev) =>
+                        prev ? { ...prev, credits: event.target.value } : prev,
+                      )
+                    }
+                    className={fieldClassName}
+                  />
+                </label>
+
+                <label className={mutedLabelClassName}>
+                  Target grade
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={courseDraft.targetGrade}
+                    onChange={(event) =>
+                      setCourseDraft((prev) =>
+                        prev ? { ...prev, targetGrade: event.target.value } : prev,
+                      )
+                    }
+                    className={fieldClassName}
+                  />
+                </label>
+
+                <label className={mutedLabelClassName}>
+                  Final exam weight %
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={courseDraft.finalExamWeight}
+                    onChange={(event) =>
+                      setCourseDraft((prev) =>
+                        prev ? { ...prev, finalExamWeight: event.target.value } : prev,
+                      )
+                    }
+                    className={fieldClassName}
+                  />
+                </label>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="system-label text-white/45">Grading Categories</p>
+                  <button onClick={addCategoryDraft} className={subtleButtonClassName}>
+                    Add category
+                  </button>
+                </div>
+
+                {courseDraft.categories.map((category, index) => (
+                  <div key={`${index}-${category.name}`} className="grid gap-2 sm:grid-cols-[1fr_120px_auto]">
+                    <input
+                      placeholder="Category name"
+                      value={category.name}
+                      onChange={(event) => updateCategoryDraft(index, "name", event.target.value)}
+                      className={compactFieldClassName}
+                    />
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      placeholder="Weight"
+                      value={category.weight}
+                      onChange={(event) => updateCategoryDraft(index, "weight", event.target.value)}
+                      className={compactFieldClassName}
+                    />
+                    <button
+                      onClick={() => removeCategoryDraft(index)}
+                      className="rounded-lg border border-rose-500/18 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-100 transition-all duration-200 hover:bg-rose-500/14 active:scale-[0.98]"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+
+                <p className="text-xs text-white/50">
+                  Total category weight: <strong>{categoryWeightTotal(courseDraft.categories)}%</strong>
+                </p>
+              </div>
+
+              {courseFormError ? (
+                <p className="rounded-lg border border-rose-500/18 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">{courseFormError}</p>
+              ) : null}
+
+              <div className="flex gap-2">
+                <button onClick={saveCourseDraft} className={primaryButtonClassName}>
+                  {isEditCourseMode ? "Save course" : "Create course"}
+                </button>
+                <button onClick={closeCourseDraft} className={secondaryButtonClassName}>
+                  Cancel
                 </button>
               </div>
-            ))}
-
-            <p className="text-xs text-slate-500">
-              Total category weight: <strong>{categoryWeightTotal(courseDraft.categories)}%</strong>
-            </p>
-          </div>
-
-          {courseFormError ? (
-            <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{courseFormError}</p>
+            </Card>
           ) : null}
 
-          <div className="flex gap-2">
-            <button
-              onClick={saveCourseDraft}
-              className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700"
-            >
-              {isEditCourseMode ? "Save course" : "Create course"}
-            </button>
-            <button
-              onClick={closeCourseDraft}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
-            >
-              Cancel
-            </button>
-          </div>
-        </Card>
-      ) : null}
-
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3"> 
-        <Card title="Courses overview" subtitle="Live course model">
-          <MetricRow label="Active courses" value={`${courses.length}`} />
-          <MetricRow
-            label="Credits"
-            value={`${courses.reduce((sum, course) => sum + course.credits, 0)}`}
-          />
-          <MetricRow
-            label="Avg current grade"
-            value={formatPercent(
-              courses.reduce((sum, course) => sum + calculateCourseMetrics(course).currentGrade, 0) /
-                courses.length,
-            )}
-          />
-        </Card>
-        <Card title="GPA Overview" subtitle="Credit-weighted estimate">
-          <div className="mb-3 grid gap-3 sm:grid-cols-2">
-            <label className="text-xs text-slate-500">
-              GPA scale
-              <select
-                value={gpaScale}
-                onChange={(event) => setGpaScale(event.target.value as GpaScale)}
-                className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
-              >
-                <option value="seven_point">7-point style</option>
-                <option value="ten_point">10-point style</option>
-              </select>
-            </label>
-
-            <label className="text-xs text-slate-500">
-              What-if projected grade for {selectedCourse.name}
-              <input
-                type="number"
-                min={0}
-                max={100}
-                step="0.1"
-                value={whatIfGrade}
-                onChange={(event) => setWhatIfGrade(event.target.value)}
-                placeholder={formatPercent(metrics.projectedGrade)}
-                className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
-              />
-            </label>
-          </div>
-
-          <MetricRow label="Current GPA" value={formatGpa(currentGpa)} />
-          <MetricRow label="Projected GPA" value={formatGpa(projectedGpa)} />
-          <MetricRow label="What-if GPA" value={formatGpa(whatIfProjectedGpa)} />
-          <MetricRow
-            label="Best impact course"
-            value={
-              bestImpactCourse
-                ? `${bestImpactCourse.course.name} (${formatGpa(bestImpactCourse.projectedGpa)})`
-                : "—"
-            }
-          />
-          <MetricRow
-            label="Worst impact course"
-            value={
-              worstImpactCourse
-                ? `${worstImpactCourse.course.name} (${formatGpa(worstImpactCourse.projectedGpa)})`
-                : "—"
-            }
-          />
-        </Card>
-        <Card title="Current grades" subtitle={selectedCourse.name}>
-          <MetricRow
-            label="Current"
-            value={`${formatPercent(metrics.currentGrade)} (${toLetterGrade(metrics.currentGrade)})`}
-          />
-          <MetricRow label="Target" value={`${formatPercent(selectedCourse.targetGrade)}`} />
-          <MetricRow label="Projected" value={`${formatPercent(metrics.projectedGrade)}`} />
-        </Card>
-
-        <Card title="Class priority ranking" subtitle="Computed from risk + urgency">
-          {coursePriorities.map((item) => (
-            <div
-              key={item.course.id}
-              className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2"
-            >
-              <div className="flex items-center gap-2">
-                <span
-                  className={`rounded-full px-2 py-0.5 text-xs font-semibold ${priorityClasses[item.label]}`}
+          <section className="grid gap-4 border-t border-white/[0.04] pt-6 md:grid-cols-2 xl:grid-cols-3">
+            <Card title="Courses overview" subtitle="Live course model">
+            <MetricRow label="Active courses" value={`${courses.length}`} />
+            <MetricRow
+              label="Credits"
+              value={`${courses.reduce((sum, course) => sum + course.credits, 0)}`}
+            />
+            <MetricRow
+              label="Avg current grade"
+              value={formatPercent(
+                courseInsights.reduce((sum, course) => sum + course.metrics.currentGrade, 0) /
+                  courses.length,
+              )}
+            />
+            <MetricRow
+              label="Focus first"
+              value={courseInsights[0] ? courseInsights[0].course.name : "—"}
+            />
+          </Card>
+          <Card title="GPA Overview" subtitle="Credit-weighted estimate">
+            <div className="mb-3 grid gap-3 sm:grid-cols-2">
+              <label className={mutedLabelClassName}>
+                GPA scale
+                <select
+                  value={gpaScale}
+                  onChange={(event) => setGpaScale(event.target.value as GpaScale)}
+                  className={fieldClassName}
                 >
-                  {item.label}
-                </span>
-                <span className="text-sm text-slate-700">{item.course.name}</span>
-              </div>
-              <span className="text-sm font-semibold text-slate-900">{item.score}</span>
+                  <option value="seven_point">7-point style</option>
+                  <option value="ten_point">10-point style</option>
+                </select>
+              </label>
+
+              <label className={mutedLabelClassName}>
+                What-if projected grade for {selectedCourse.name}
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step="0.1"
+                  value={whatIfGrade}
+                  onChange={(event) => setWhatIfGrade(event.target.value)}
+                  placeholder={formatPercent(metrics.projectedGrade)}
+                  className={fieldClassName}
+                />
+              </label>
             </div>
-          ))}
-        </Card>
 
-        <Card
-          title="Grade target calculator"
-          className="xl:col-span-2"
-          subtitle="Needed on all remaining coursework"
-        >
-          <MetricRow label="Completed weight" value={formatPercent(metrics.completedWeight)} />
-          <MetricRow label="Remaining weight" value={formatPercent(metrics.remainingWeight)} />
-          <MetricRow
-            label="Needed on remaining"
-            value={renderNeededValue(metrics.neededOnRemaining)}
-          />
-          <p className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-700">
-            {explainNeededScore(metrics.neededOnRemaining)}
-          </p>
-          <span
-            className={`inline-flex rounded-full border px-2 py-1 text-xs font-semibold ${neededStateClasses[remainingState]}`}
-          >
-            {remainingState.toUpperCase()}
-          </span>
-        </Card>
-
-        <Card title="Final exam calculator" subtitle="Needed on final exam only">
-          <MetricRow label="Final exam weight" value={formatPercent(metrics.finalExamWeight)} />
-          <MetricRow label="Needed on final" value={renderNeededValue(metrics.neededOnFinal)} />
-          <p className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-700">
-            {explainNeededScore(metrics.neededOnFinal)}
-          </p>
-          <span
-            className={`inline-flex rounded-full border px-2 py-1 text-xs font-semibold ${neededStateClasses[finalState]}`}
-          >
-            {finalState.toUpperCase()}
-          </span>
-        </Card>
-      </section>
-
-      <Card title="Assignments table" subtitle="Real course assignment data">
-        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <label className="text-xs text-slate-500">
-            Filter by course
-            <select
-              value={assignmentCourseFilter}
-              onChange={(event) => setAssignmentCourseFilter(event.target.value)}
-              className="ml-0 mt-1 rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 sm:ml-2 sm:mt-0"
-            >
-              <option value="all">All courses</option>
-              {courses.map((course) => (
-                <option key={course.id} value={course.id}>
-                  {course.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="flex items-center gap-3">
-            <p className="text-xs text-slate-500">{filteredAssignments.length} assignments</p>
-            <button
-              onClick={openAddAssignment}
-              className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-700"
-            >
-              Add assignment
-            </button>
-            <button
-              onClick={resetDemoData}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
-            >
-              Reset demo data
-            </button>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead className="text-xs uppercase text-slate-500">
-              <tr>
-                <th className="px-2 py-2">Assignment</th>
-                <th className="px-2 py-2">Course</th>
-                <th className="px-2 py-2">Category</th>
-                <th className="px-2 py-2">Score</th>
-                <th className="px-2 py-2">Due date</th>
-                <th className="px-2 py-2">Status</th>
-                <th className="px-2 py-2">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700">
-              {filteredAssignments.map((assignment) => {
-                const courseName =
-                  courses.find((course) => course.id === assignment.courseId)?.name ??
-                  assignment.courseId;
-                return (
-                  <tr
-                    key={assignment.id}
-                    className={assignment.status === "completed" ? "bg-white" : "bg-amber-50/35"}
+            <MetricRow label="Current GPA" value={formatGpa(currentGpa)} />
+            <MetricRow label="Projected GPA" value={formatGpa(projectedGpa)} />
+            <MetricRow label="What-if GPA" value={formatGpa(whatIfProjectedGpa)} />
+            <MetricRow
+              label="Best GPA upside"
+              value={
+                bestGpaUpside
+                  ? `${bestGpaUpside.course.name} (+${formatGpa(bestGpaUpside.overallDelta)})`
+                  : "—"
+              }
+            />
+            <MetricRow
+              label="Dragging GPA"
+              value={
+                weakestDragCourse
+                  ? `${weakestDragCourse.course.name} (${formatPercent(weakestDragCourse.currentPercent)})`
+                  : "—"
+              }
+            />
+            {bestGpaUpside || weakestDragCourse ? (
+              <p className={noteSurfaceClassName}>
+                {bestGpaUpside
+                  ? `${bestGpaUpside.course.name} offers the clearest GPA lift if you move it toward target. `
+                  : ""}
+                {weakestDragCourse
+                  ? `${weakestDragCourse.course.name} is the weakest current performer in the mix.`
+                  : ""}
+              </p>
+            ) : null}
+          </Card>
+          <Card title="Recovery insight" subtitle={selectedCourse.name}>
+            <MetricRow
+              label="Current"
+              value={`${formatPercent(metrics.currentGrade)} (${toLetterGrade(metrics.currentGrade)})`}
+            />
+            <MetricRow label="Target" value={`${formatPercent(selectedCourse.targetGrade)}`} />
+            <MetricRow
+              label="Grade gap"
+              value={selectedCourseInsight ? formatGapSummary(selectedCourseInsight.gradeGap) : "—"}
+            />
+            <MetricRow
+              label="Open work"
+              value={
+                selectedCourseInsight
+                  ? formatPercent(selectedCourseInsight.approximateRemainingWeight)
+                  : "—"
+              }
+            />
+            <MetricRow
+              label="Needed average"
+              value={renderNeededValue(metrics.neededOnRemaining)}
+            />
+            {selectedCourseInsight ? (
+              <>
+                <p className={noteSurfaceClassName}>
+                  {describeRecoveryOutlook(selectedCourseInsight.reachability)}.{" "}
+                  {selectedCourseInsight.reason}. {formatDueWindow(selectedCourseInsight.nearestDueDays)}.
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className={`inline-flex rounded-full border px-2 py-1 text-xs font-semibold ${recoveryClasses[selectedCourseInsight.reachability]}`}
                   >
-                    <td className="px-2 py-2 font-medium">{assignment.name}</td>
-                    <td className="px-2 py-2">{courseName}</td>
-                    <td className="px-2 py-2">{assignment.category}</td>
-                    <td className="px-2 py-2">{formatAssignmentScore(assignment)}</td>
-                    <td className="px-2 py-2">{formatDate(assignment.dueDate)}</td>
-                    <td className="px-2 py-2">
-                      <span
-                        className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                          statusClasses[assignment.status]
-                        }`}
-                      >
-                        {statusLabel(assignment.status)}
+                    {describeRecoveryOutlook(selectedCourseInsight.reachability)}
+                  </span>
+                  <span className="text-xs text-white/45">
+                    {selectedCourseInsight.upcomingAssignments} open assignments
+                  </span>
+                </div>
+              </>
+            ) : null}
+          </Card>
+
+          <Card title="Priority recommendations" className="xl:col-span-2" subtitle="What to focus on first">
+            {courseInsights.slice(0, 5).map((item, index) => (
+              <button
+                key={item.course.id}
+                onClick={() => setSelectedCourseId(item.course.id)}
+                className="system-subtle-panel system-card-interactive w-full rounded-xl border border-white/[0.05] bg-black/40 px-3 py-3 text-left shadow-[0_18px_44px_rgba(0,0,0,0.42)] transition-all duration-300 ease-out hover:-translate-y-[1px] hover:border-white/[0.12] hover:shadow-[0_12px_40px_rgba(0,0,0,0.75)]"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="system-label text-white/35">
+                        #{index + 1}
                       </span>
-                    </td>
-                    <td className="px-2 py-2">
-                      <button
-                        onClick={() => {
-                          setSelectedCourseId(assignment.courseId);
-                          openEditAssignment(assignment);
-                        }}
-                        className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                      <p className="text-sm font-semibold text-white">{item.course.name}</p>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-semibold ${priorityClasses[item.priorityLabel]}`}
                       >
-                        Edit
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+                        {item.priorityLabel}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-white/50">
+                      {formatPercent(item.metrics.currentGrade)} current •{" "}
+                      {formatPercent(item.course.targetGrade)} target •{" "}
+                      {item.neededState === "impossible"
+                        ? "Target now unlikely"
+                        : `Need ${renderNeededValue(item.metrics.neededOnRemaining)} on remaining`}
+                    </p>
+                    <p className="mt-2 text-sm text-white/78">{item.reason}</p>
+                    <p className="text-xs text-white/48">{item.recommendation}</p>
+                  </div>
 
-      {assignmentDraft ? (
-        <Card
-          title={isEditAssignmentMode ? "Edit assignment" : "Add assignment"}
-          subtitle={`Course: ${selectedCourse.name}`}
-        >
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="text-xs text-slate-500">
-              Assignment name
-              <input
-                value={assignmentDraft.name}
-                onChange={(event) =>
-                  setAssignmentDraft((prev) => (prev ? { ...prev, name: event.target.value } : prev))
-                }
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700"
-              />
-            </label>
+                  <div className="shrink-0 text-right">
+                    <p className="text-lg font-semibold text-white">{item.priorityScore}</p>
+                    <p className="system-label text-white/40">Priority</p>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </Card>
 
-            <label className="text-xs text-slate-500">
-              Category
-              <select
-                value={assignmentDraft.category}
-                onChange={(event) =>
-                  setAssignmentDraft((prev) =>
-                    prev ? { ...prev, category: event.target.value } : prev,
-                  )
-                }
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700"
-              >
-                {selectedCourse.categories.map((category) => (
-                  <option key={category.name} value={category.name}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="text-xs text-slate-500">
-              Score earned (optional)
-              <input
-                type="number"
-                value={assignmentDraft.scoreEarned}
-                onChange={(event) =>
-                  setAssignmentDraft((prev) =>
-                    prev ? { ...prev, scoreEarned: event.target.value } : prev,
-                  )
-                }
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700"
-              />
-            </label>
-
-            <label className="text-xs text-slate-500">
-              Score possible (optional)
-              <input
-                type="number"
-                value={assignmentDraft.scorePossible}
-                onChange={(event) =>
-                  setAssignmentDraft((prev) =>
-                    prev ? { ...prev, scorePossible: event.target.value } : prev,
-                  )
-                }
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700"
-              />
-            </label>
-
-            <label className="text-xs text-slate-500">
-              Due date
-              <input
-                type="date"
-                value={assignmentDraft.dueDate}
-                onChange={(event) =>
-                  setAssignmentDraft((prev) =>
-                    prev ? { ...prev, dueDate: event.target.value } : prev,
-                  )
-                }
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700"
-              />
-            </label>
-
-            <label className="text-xs text-slate-500">
-              Status
-              <select
-                value={assignmentDraft.status}
-                onChange={(event) =>
-                  setAssignmentDraft((prev) =>
-                    prev ? { ...prev, status: event.target.value as AssignmentStatus } : prev,
-                  )
-                }
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700"
-              >
-                <option value="not-started">Not started</option>
-                <option value="in-progress">In progress</option>
-                <option value="completed">Completed</option>
-              </select>
-            </label>
-          </div>
-
-          <p className="text-xs text-slate-500">
-            Leave score fields blank for incomplete assignments. Metrics update instantly once saved.
-          </p>
-
-          <div className="flex gap-2">
-            <button
-              onClick={saveAssignmentDraft}
-              className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+          <Card
+            title="Grade target calculator"
+            className="xl:col-span-1"
+            subtitle="Needed on all remaining coursework"
+          >
+            <MetricRow label="Completed weight" value={formatPercent(metrics.completedWeight)} />
+            <MetricRow label="Remaining weight" value={formatPercent(metrics.remainingWeight)} />
+            <MetricRow
+              label="Needed on remaining"
+              value={renderNeededValue(metrics.neededOnRemaining)}
+            />
+            <p className={noteSurfaceClassName}>
+              {selectedCourseInsight
+                ? `${describeRecoveryOutlook(selectedCourseInsight.reachability)}. ${explainNeededScore(
+                    metrics.neededOnRemaining,
+                  )}`
+                : explainNeededScore(metrics.neededOnRemaining)}
+            </p>
+            <span
+              className={`inline-flex rounded-full border px-2 py-1 text-xs font-semibold ${neededStateClasses[remainingState]}`}
             >
-              {isEditAssignmentMode ? "Save changes" : "Add assignment"}
-            </button>
-            <button
-              onClick={closeAssignmentDraft}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+              {remainingState.toUpperCase()}
+            </span>
+          </Card>
+
+          <Card title="Final exam calculator" subtitle="Needed on final exam only">
+            <MetricRow label="Final exam weight" value={formatPercent(metrics.finalExamWeight)} />
+            <MetricRow label="Needed on final" value={renderNeededValue(metrics.neededOnFinal)} />
+            <p className={noteSurfaceClassName}>
+              {explainNeededScore(metrics.neededOnFinal)}
+            </p>
+            <span
+              className={`inline-flex rounded-full border px-2 py-1 text-xs font-semibold ${neededStateClasses[finalState]}`}
             >
-              Cancel
-            </button>
-          </div>
-        </Card>
-      ) : null}
+              {finalState.toUpperCase()}
+            </span>
+            </Card>
+          </section>
+        </>
+      )}
     </div>
   );
 }
