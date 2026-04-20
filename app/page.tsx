@@ -525,8 +525,12 @@ export default function HomePage() {
   const canCompleteAction = Boolean(dashboard.nextAction.completionTarget) && dashboard.nextAction.tone !== "clear";
 
   return (
-    <div className="space-y-3 text-white sm:space-y-4">
-      <section className="grid gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
+    <div className="relative isolate min-w-0 space-y-8 px-1 py-1 text-white sm:px-2">
+      <div className="pointer-events-none absolute inset-x-[-12%] top-[-11rem] -z-10 h-[30rem] bg-[radial-gradient(ellipse_at_50%_0%,rgba(56,189,248,0.18),rgba(20,184,166,0.07)_36%,transparent_70%)] blur-3xl" />
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_18%_14%,rgba(148,163,184,0.095),transparent_28%),radial-gradient(circle_at_88%_7%,rgba(45,212,191,0.07),transparent_32%),linear-gradient(180deg,rgba(4,8,14,0.62),transparent_42%)]" />
+      <div className="pointer-events-none absolute inset-0 -z-10 opacity-[0.055] [background-image:radial-gradient(rgba(255,255,255,0.65)_0.5px,transparent_0.8px)] [background-size:12px_12px]" />
+
+      <section className="relative grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
         <NextActionPanel
           action={dashboard.nextAction}
           canComplete={canCompleteAction}
@@ -553,8 +557,8 @@ export default function HomePage() {
         />
       </section>
 
-      <section className="grid gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
-        <div className="space-y-3 sm:space-y-4">
+      <section className="relative grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
+        <div className="min-w-0 space-y-6">
           <DailyChecksPanel
             checks={dashboard.dailyChecks}
             completedChecks={dashboard.completedChecks}
@@ -585,9 +589,10 @@ function CommandPanel({
 }) {
   return (
     <section
-      className={`system-panel rounded-[24px] border-white/[0.085] bg-[radial-gradient(circle_at_14%_0%,rgba(255,255,255,0.095),transparent_36%),linear-gradient(180deg,rgba(20,20,23,0.98),rgba(9,9,11,0.94))] shadow-[0_22px_70px_rgba(0,0,0,0.58),inset_0_1px_0_rgba(255,255,255,0.045)] backdrop-blur-xl ${className}`}
+      className={`system-panel min-w-0 rounded-3xl border-white/[0.12] bg-[radial-gradient(circle_at_16%_0%,rgba(148,163,184,0.11),transparent_34%),radial-gradient(circle_at_86%_4%,rgba(45,212,191,0.045),transparent_35%),linear-gradient(180deg,rgba(18,23,30,0.92),rgba(9,11,16,0.96)_38%,rgba(4,5,8,0.96))] shadow-[0_8px_30px_rgba(0,0,0,0.62),0_28px_80px_rgba(0,0,0,0.54),inset_0_1px_0_rgba(255,255,255,0.065)] backdrop-blur-xl ${className}`}
     >
-      <div className="pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-cyan-100/28 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-8 bottom-0 h-px bg-gradient-to-r from-transparent via-cyan-300/10 to-transparent" />
       <div className="relative">{children}</div>
     </section>
   );
@@ -609,13 +614,16 @@ function NextActionPanel({
   const isUrgent = action.tone === "urgent";
 
   return (
-    <CommandPanel className="min-h-[23rem] p-5 shadow-[0_28px_86px_rgba(0,0,0,0.66),inset_0_1px_0_rgba(255,255,255,0.055)] sm:p-6 lg:p-7">
-      <div className="flex h-full flex-col justify-between gap-6">
-        <div className="space-y-2.5">
-          <p className="system-label text-white/52">Current Focus</p>
+    <CommandPanel className="min-h-[23rem] border-cyan-100/[0.14] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.68),0_36px_110px_rgba(0,0,0,0.64),0_0_86px_rgba(14,165,233,0.08),inset_0_1px_0_rgba(255,255,255,0.08)] sm:p-7 lg:p-8">
+      <div className="pointer-events-none absolute inset-x-8 top-0 h-28 bg-[radial-gradient(ellipse_at_50%_0%,rgba(125,211,252,0.16),transparent_68%)]" />
+      <div className="flex h-full flex-col justify-between gap-8">
+        <div className="space-y-3">
+          <p className="system-label tracking-[0.22em] text-cyan-50/42">Current Focus</p>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-5xl">Next Action</h1>
+              <h1 className="text-3xl font-semibold tracking-tight text-white drop-shadow-[0_0_26px_rgba(255,255,255,0.08)] sm:text-5xl">
+                Next Action
+              </h1>
               <p className="mt-2.5 max-w-2xl text-sm leading-6 text-white/62 sm:text-base">
                 The clearest action across planner, academics, and fitness based on the current app state.
               </p>
@@ -624,24 +632,24 @@ function NextActionPanel({
         </div>
 
         <div
-          className={`relative overflow-hidden rounded-[22px] border p-5 shadow-[0_30px_90px_rgba(0,0,0,0.68),inset_0_1px_0_rgba(255,255,255,0.075)] before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-24 before:bg-[linear-gradient(180deg,rgba(255,255,255,0.075),transparent)] after:pointer-events-none after:absolute after:inset-0 after:bg-[radial-gradient(circle_at_18%_0%,rgba(255,255,255,0.09),transparent_42%)] sm:p-6 ${
+          className={`relative overflow-hidden rounded-[1.4rem] border p-6 shadow-[0_8px_30px_rgba(0,0,0,0.74),0_34px_100px_rgba(0,0,0,0.62),0_0_54px_rgba(34,211,238,0.085),inset_0_1px_0_rgba(255,255,255,0.095)] before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-24 before:bg-[linear-gradient(180deg,rgba(255,255,255,0.095),transparent)] after:pointer-events-none after:absolute after:inset-0 after:bg-[radial-gradient(circle_at_18%_0%,rgba(125,211,252,0.12),transparent_42%),radial-gradient(circle_at_86%_100%,rgba(20,184,166,0.07),transparent_34%)] sm:p-7 ${
             isUrgent
-              ? "border-rose-200/22 bg-[linear-gradient(180deg,rgba(244,63,94,0.1),rgba(255,255,255,0.045)_48%,rgba(9,9,11,0.72))]"
-              : "border-white/[0.12] bg-[linear-gradient(180deg,rgba(255,255,255,0.085),rgba(255,255,255,0.04)_50%,rgba(8,8,10,0.76))]"
+              ? "border-rose-200/25 border-l-2 border-l-red-400/40 bg-[linear-gradient(180deg,rgba(244,63,94,0.1),rgba(255,255,255,0.055)_48%,rgba(8,10,14,0.76))]"
+              : "border-cyan-100/[0.16] bg-[linear-gradient(180deg,rgba(255,255,255,0.1),rgba(15,23,42,0.36)_50%,rgba(5,8,12,0.8))]"
           }`}
         >
-          <div className="relative flex flex-col gap-4">
+          <div className="relative flex flex-col gap-5">
             <div className="min-w-0 space-y-3">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="system-pill border-white/[0.12] bg-white/[0.07] px-3.5 py-1.5 text-[11px] font-semibold text-white/82 shadow-[inset_0_1px_0_rgba(255,255,255,0.055)]">
+                <span className="system-pill border-cyan-100/[0.14] bg-cyan-100/[0.06] px-3.5 py-1.5 text-[11px] font-semibold text-cyan-50/84 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
                   {action.source}
                 </span>
                 {action.timingLabel ? (
                   <span
                     className={`rounded-full border px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] shadow-[inset_0_1px_0_rgba(255,255,255,0.045)] ${
                       isUrgent
-                        ? "border-rose-200/22 bg-rose-200/[0.095] text-rose-50/90"
-                        : "border-white/[0.11] bg-white/[0.055] text-white/72"
+                        ? "border-rose-200/25 bg-rose-200/[0.095] text-rose-50/90"
+                        : "border-cyan-100/[0.13] bg-white/[0.055] text-white/74"
                     }`}
                   >
                     {hasHydrated ? action.timingLabel : "Loading"}
@@ -649,10 +657,10 @@ function NextActionPanel({
                 ) : null}
               </div>
               <div>
-                <h2 className="text-[1.85rem] font-semibold leading-[1.08] tracking-tight text-white sm:text-[2.6rem]">
+                <h2 className="break-words text-[1.85rem] font-semibold leading-[1.08] tracking-tight text-white drop-shadow-[0_0_24px_rgba(125,211,252,0.1)] sm:text-[2.6rem]">
                   {hasHydrated ? action.title : "Reading current state"}
                 </h2>
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-white/64">
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-white/66">
                   {hasHydrated ? action.supportingLine : "Loading planner, academics, and fitness signals."}
                 </p>
               </div>
@@ -660,10 +668,10 @@ function NextActionPanel({
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="flex flex-col gap-3 sm:flex-row">
           <button
             type="button"
-            className="system-button-primary inline-flex min-w-[10rem] items-center justify-center rounded-[16px] px-5 py-3 text-sm font-semibold shadow-[0_18px_48px_rgba(0,0,0,0.54),0_0_32px_rgba(255,255,255,0.08),inset_0_1px_0_rgba(255,255,255,0.55)]"
+            className="system-button-primary inline-flex min-w-[10rem] items-center justify-center rounded-[16px] border-cyan-50/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(203,245,255,0.88))] px-5 py-3 text-sm font-semibold shadow-[0_18px_48px_rgba(0,0,0,0.54),0_0_34px_rgba(34,211,238,0.13),inset_0_1px_0_rgba(255,255,255,0.62)] transition-all duration-150 hover:border-cyan-50 hover:bg-white/10"
             disabled={!hasHydrated || action.tone === "clear"}
             onClick={onStartFocus}
           >
@@ -671,7 +679,7 @@ function NextActionPanel({
           </button>
           <button
             type="button"
-            className="system-button-secondary inline-flex min-w-[10rem] items-center justify-center rounded-[16px] border-white/[0.075] bg-white/[0.035] px-5 py-3 text-sm font-semibold text-white/72 shadow-[0_14px_34px_rgba(0,0,0,0.36)]"
+            className="system-button-secondary inline-flex min-w-[10rem] items-center justify-center rounded-[16px] border-cyan-100/[0.13] bg-white/[0.035] px-5 py-3 text-sm font-semibold text-white/74 shadow-[0_14px_34px_rgba(0,0,0,0.36),inset_0_1px_0_rgba(255,255,255,0.035)] transition-all duration-150 hover:border-cyan-100/20 hover:bg-white/10"
             disabled={!hasHydrated || !canComplete}
             onClick={onMarkComplete}
             title={canComplete ? undefined : "This action needs exact logging on its source page."}
@@ -716,22 +724,22 @@ function SystemStatusPanel({
   workoutComplete: boolean;
 }) {
   return (
-    <CommandPanel className="p-5 sm:p-6">
-      <div className="space-y-4">
-        <div className="space-y-2.5">
-          <p className="system-label text-white/50">System Status</p>
-          <div className="flex items-start justify-between gap-4">
+    <CommandPanel className="p-6 shadow-[0_8px_30px_rgba(0,0,0,0.62),0_24px_70px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.06)]">
+      <div className="space-y-5">
+        <div className="space-y-3">
+          <p className="system-label tracking-[0.22em] text-white/40">System Status</p>
+          <div className="flex flex-col items-center gap-3 text-center">
             <div>
-              <h2 className="text-2xl font-semibold tracking-tight text-white">
+              <h2 className="text-xl font-semibold tracking-tight text-white">
                 {hasHydrated ? statusTitle : "Loading"}
               </h2>
               <p className="mt-1 text-xs font-semibold uppercase tracking-[0.2em] text-white/44">
                 Live Readiness Index
               </p>
             </div>
-            <p className="text-5xl font-semibold tracking-tight text-white">
+            <p className="text-3xl font-semibold tracking-tight text-white drop-shadow-[0_0_18px_rgba(125,211,252,0.1)]">
               {hasHydrated ? readinessScore : "--"}
-              <span className="text-xl text-white/42">/100</span>
+              <span className="text-sm text-white/42">/100</span>
             </p>
           </div>
           <p className="text-sm leading-6 text-white/62">{hasHydrated ? pressureDetail : "Reading live app state."}</p>
@@ -742,23 +750,23 @@ function SystemStatusPanel({
             <span>Readiness</span>
             <span>{hasHydrated ? `${readinessScore}%` : "--"}</span>
           </div>
-          <div className="h-1 overflow-hidden rounded-full bg-black/34 shadow-[inset_0_1px_1px_rgba(0,0,0,0.55)]">
+          <div className="h-1.5 overflow-hidden rounded-full bg-black/35 shadow-[inset_0_1px_1px_rgba(0,0,0,0.55)]">
             <div
-              className="h-full rounded-full bg-[linear-gradient(90deg,rgba(255,255,255,0.52),rgba(255,255,255,0.84))] shadow-[0_0_16px_rgba(255,255,255,0.12)] transition-[width] duration-200 ease-out"
+              className="h-full rounded-full bg-[linear-gradient(90deg,rgba(103,232,249,0.82),rgba(94,234,212,0.68))] shadow-[0_0_18px_rgba(45,212,191,0.18)] transition-[width] duration-200 ease-out"
               style={{ width: `${hasHydrated ? readinessScore : 0}%` }}
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-1.5 rounded-[18px] border border-white/[0.055] bg-black/18 p-1.5">
+        <div className="grid grid-cols-3 gap-1.5 rounded-[18px] border border-white/[0.105] bg-black/20 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
           <StatusMetric label="Overdue" value={hasHydrated ? String(overdueCount) : "--"} active={overdueCount > 0} />
           <StatusMetric label="Today" value={hasHydrated ? String(dueTodayCount) : "--"} active={dueTodayCount > 0} emphasized />
           <StatusMetric label="At Risk" value={hasHydrated ? String(atRiskCount) : "--"} active={atRiskCount > 0} />
         </div>
 
-        <div className="rounded-[18px] border border-white/[0.075] bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.015))] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+        <div className="rounded-[18px] border border-white/[0.11] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.018))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.045)]">
           <div className="mb-3 flex items-center justify-between gap-3">
-            <p className="system-label text-white/44">Fitness Signal</p>
+            <p className="system-label tracking-[0.22em] text-white/40">Fitness Signal</p>
             <span className="text-xs font-semibold text-white/58">{workoutComplete ? "Workout logged" : "Workout open"}</span>
           </div>
           <div className="space-y-3">
@@ -787,13 +795,13 @@ function StatusMetric({
     <div
       className={`rounded-[14px] border px-3 py-2.5 ${
         active
-          ? "border-rose-200/16 bg-rose-200/[0.055] shadow-[inset_0_1px_0_rgba(255,255,255,0.045)]"
+          ? "border-cyan-100/[0.16] bg-cyan-100/[0.055] shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_0_22px_rgba(34,211,238,0.07)]"
           : emphasized
-            ? "border-white/[0.09] bg-white/[0.045] shadow-[inset_0_1px_0_rgba(255,255,255,0.045)]"
+            ? "border-white/[0.12] bg-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.045)]"
             : "border-transparent bg-transparent"
       }`}
     >
-      <p className="system-label text-white/42">{label}</p>
+      <p className="system-label tracking-[0.22em] text-white/40">{label}</p>
       <p className="mt-1.5 text-2xl font-semibold tracking-tight text-white/92">{value}</p>
     </div>
   );
@@ -803,9 +811,9 @@ function FitnessSignalRow({ label, progress, value }: { label: string; progress:
   return (
     <div className="grid grid-cols-[4.5rem_minmax(0,1fr)_auto] items-center gap-2 text-xs">
       <span className="font-medium text-white/58">{label}</span>
-      <div className="h-1.5 overflow-hidden rounded-full bg-black/30 shadow-[inset_0_1px_1px_rgba(0,0,0,0.46)]">
+      <div className="h-1.5 overflow-hidden rounded-full bg-black/35 shadow-[inset_0_1px_1px_rgba(0,0,0,0.5)]">
         <div
-          className="h-full rounded-full bg-white/68 transition-[width] duration-200 ease-out"
+          className="h-full rounded-full bg-[linear-gradient(90deg,rgba(103,232,249,0.7),rgba(94,234,212,0.72))] shadow-[0_0_14px_rgba(45,212,191,0.14)] transition-[width] duration-200 ease-out"
           style={{ width: `${clamp(progress, 0, 1) * 100}%` }}
         />
       </div>
@@ -828,33 +836,33 @@ function DailyChecksPanel({
   workoutStreak: number;
 }) {
   return (
-    <CommandPanel className="p-5 shadow-[0_22px_68px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.05)] sm:p-6">
-      <div className="space-y-3.5">
+    <CommandPanel className="p-6 shadow-[0_8px_30px_rgba(0,0,0,0.62),0_24px_72px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.06)]">
+      <div className="space-y-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="system-label text-white/50">Daily Checks</p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white">Daily Checks</h2>
+            <p className="system-label tracking-[0.22em] text-white/40">Daily Checks</p>
+            <h2 className="mt-2 text-xl font-semibold tracking-tight text-white">Daily Checks</h2>
             <p className="mt-1 text-sm leading-5 text-white/58">Daily fitness targets</p>
           </div>
-          <span className="system-pill w-fit border-white/[0.095] bg-white/[0.055] px-3 py-1.5 text-xs font-semibold text-white/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.045)]">
+          <span className="system-pill w-fit border-cyan-100/[0.13] bg-cyan-100/[0.045] px-3 py-1.5 text-xs font-semibold text-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.045)]">
             {hasHydrated ? `${completedChecks} / 3 complete` : "Loading"}
           </span>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 rounded-full border border-white/[0.07] bg-black/24 p-1.5 shadow-[inset_0_1px_2px_rgba(0,0,0,0.45)]">
+        <div className="grid grid-cols-3 gap-2 rounded-full border border-white/[0.105] bg-black/24 p-1.5 shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]">
           {checks.map((check) => (
             <div
               key={check.kind}
               className={`h-2.5 rounded-full transition-colors duration-200 ${
                 check.state === "complete"
-                  ? "bg-teal-100/58 shadow-[0_0_20px_rgba(94,234,212,0.14)]"
-                  : "bg-white/[0.085]"
+                  ? "bg-[linear-gradient(90deg,rgba(103,232,249,0.76),rgba(94,234,212,0.72))] shadow-[0_0_20px_rgba(94,234,212,0.16)]"
+                  : "bg-white/[0.075]"
               }`}
             />
           ))}
         </div>
 
-        <div className="space-y-1.5">
+        <div className="space-y-2.5">
           {checks.map((check) => (
             <DailyCheckRow key={check.kind} check={check} />
           ))}
@@ -885,12 +893,12 @@ function DailyCheckRow({ check }: { check: DailyCheck }) {
 
   return (
     <div
-      className={`system-card-interactive rounded-[17px] border px-4 py-2.5 transition-colors duration-200 ${
+      className={`system-card-interactive rounded-[18px] border px-4 py-3 transition-all duration-150 hover:bg-white/[0.04] ${
         isComplete
-          ? "border-teal-100/20 bg-teal-200/[0.065] shadow-[inset_0_1px_0_rgba(153,246,228,0.1),0_0_30px_rgba(45,212,191,0.07)]"
+          ? "border-teal-100/[0.16] bg-teal-100/[0.055] shadow-[inset_0_1px_0_rgba(255,255,255,0.055),0_0_24px_rgba(45,212,191,0.055)]"
           : isInProgress
-            ? "border-white/[0.095] bg-white/[0.045] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
-            : "border-white/[0.06] bg-white/[0.026]"
+            ? "border-cyan-100/[0.13] bg-white/[0.045] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
+            : "border-white/[0.085] bg-white/[0.026]"
       }`}
     >
       <div className="flex items-center justify-between gap-4">
@@ -900,7 +908,7 @@ function DailyCheckRow({ check }: { check: DailyCheck }) {
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1 text-right">
           {isComplete ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-teal-100/18 bg-teal-100/[0.11] px-3 py-1 text-xs font-semibold text-teal-50/92 shadow-[inset_0_1px_0_rgba(255,255,255,0.045)]">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-teal-100/20 bg-teal-100/[0.12] px-3 py-1 text-xs font-semibold text-teal-50/92 shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_0_14px_rgba(45,212,191,0.08)]">
               <svg aria-hidden="true" className="h-3 w-3" viewBox="0 0 16 16" fill="none">
                 <path
                   d="M3.5 8.3 6.6 11.4 12.8 4.6"
@@ -913,11 +921,11 @@ function DailyCheckRow({ check }: { check: DailyCheck }) {
               Complete
             </span>
           ) : isInProgress ? (
-            <span className="rounded-full border border-white/[0.085] bg-white/[0.04] px-3 py-1 text-xs font-semibold text-white/74">
+            <span className="rounded-full border border-cyan-100/[0.13] bg-white/[0.04] px-3 py-1 text-xs font-semibold text-white/74">
               {check.statusLabel}
             </span>
           ) : (
-            <span className="rounded-full border border-white/[0.055] bg-black/20 px-3 py-1 text-xs font-semibold text-white/52">
+            <span className="rounded-full border border-white/[0.06] bg-black/24 px-3 py-1 text-xs font-semibold text-white/52">
               {isLoading ? "Loading" : check.statusLabel}
             </span>
           )}
@@ -942,9 +950,9 @@ function TodayPressureStrip({
   overdueCount: number;
 }) {
   return (
-    <div className="rounded-[22px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(255,255,255,0.052),rgba(255,255,255,0.022))] px-4 py-3.5 shadow-[0_18px_48px_rgba(0,0,0,0.46),inset_0_1px_0_rgba(255,255,255,0.045)] sm:px-5">
+    <div className="rounded-[18px] border border-white/[0.105] bg-[radial-gradient(circle_at_18%_0%,rgba(125,211,252,0.055),transparent_40%),linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.016))] px-4 py-3.5 shadow-[0_16px_44px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.045)] sm:px-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="system-label text-white/50">Today Pressure</p>
+        <p className="system-label tracking-[0.22em] text-white/40">Today Pressure</p>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <PressureItem label="Overdue" value={hasHydrated ? String(overdueCount) : "--"} active={overdueCount > 0} />
           <PressureItem label="Due Today" value={hasHydrated ? String(dueTodayCount) : "--"} active={dueTodayCount > 0} />
@@ -959,12 +967,14 @@ function TodayPressureStrip({
 function PressureItem({ active, label, value }: { active: boolean; label: string; value: string }) {
   return (
     <div
-      className={`min-w-[5.25rem] rounded-[14px] border px-3 py-2 ${
-        active ? "border-rose-200/14 bg-rose-200/[0.045]" : "border-white/[0.045] bg-black/16"
+      className={`min-w-[5rem] rounded-[14px] border px-3 py-2 ${
+        active
+          ? "border-cyan-100/[0.15] bg-cyan-100/[0.045] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]"
+          : "border-white/[0.055] bg-black/18"
       }`}
     >
-      <p className="text-[0.62rem] font-semibold uppercase tracking-[0.22em] text-white/42">{label}</p>
-      <p className={`mt-1 text-xl font-semibold tracking-tight ${active ? "text-white" : "text-white/70"}`}>{value}</p>
+      <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-white/42">{label}</p>
+      <p className={`mt-1 text-lg font-semibold tracking-tight ${active ? "text-cyan-50" : "text-white/74"}`}>{value}</p>
     </div>
   );
 }
