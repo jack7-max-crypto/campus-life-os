@@ -526,11 +526,14 @@ export default function HomePage() {
 
   return (
     <div className="relative isolate min-w-0 space-y-8 px-1 py-1 text-white sm:px-2">
-      <div className="pointer-events-none absolute inset-x-[-12%] top-[-11rem] -z-10 h-[30rem] bg-[radial-gradient(ellipse_at_50%_0%,rgba(56,189,248,0.18),rgba(20,184,166,0.07)_36%,transparent_70%)] blur-3xl" />
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_18%_14%,rgba(148,163,184,0.095),transparent_28%),radial-gradient(circle_at_88%_7%,rgba(45,212,191,0.07),transparent_32%),linear-gradient(180deg,rgba(4,8,14,0.62),transparent_42%)]" />
-      <div className="pointer-events-none absolute inset-0 -z-10 opacity-[0.055] [background-image:radial-gradient(rgba(255,255,255,0.65)_0.5px,transparent_0.8px)] [background-size:12px_12px]" />
+      <div className="pointer-events-none absolute inset-x-[-24%] top-[-17rem] -z-10 h-[48rem] bg-[radial-gradient(ellipse_at_32%_22%,rgba(56,189,248,0.24),rgba(20,184,166,0.088)_31%,rgba(15,23,42,0.12)_48%,transparent_72%)] blur-3xl" />
+      <div className="pointer-events-none absolute left-[-12%] top-[3.2rem] -z-10 h-36 w-[96%] bg-[linear-gradient(90deg,transparent,rgba(186,230,253,0.19)_24%,rgba(125,211,252,0.115)_48%,rgba(148,163,184,0.055)_68%,transparent)] blur-2xl" />
+      <div className="pointer-events-none absolute right-[-16%] top-[-4rem] -z-10 h-[30rem] w-[42rem] bg-[radial-gradient(ellipse_at_46%_34%,rgba(56,189,248,0.12),rgba(15,23,42,0.105)_43%,transparent_73%)] blur-3xl" />
+      <div className="pointer-events-none absolute inset-x-[-14%] top-[-4rem] -z-10 h-[38rem] bg-[linear-gradient(180deg,rgba(1,4,10,0.08),rgba(3,7,12,0.84)_43%,rgba(1,2,5,0.35)_100%)]" />
+      <div className="pointer-events-none absolute inset-[-3rem] -z-10 bg-[radial-gradient(circle_at_18%_13%,rgba(186,230,253,0.105),transparent_29%),radial-gradient(circle_at_79%_7%,rgba(45,212,191,0.06),transparent_36%),radial-gradient(ellipse_at_50%_42%,transparent_38%,rgba(0,0,0,0.62)_100%),linear-gradient(180deg,rgba(4,8,14,0.7),transparent_45%)]" />
+      <div className="pointer-events-none absolute inset-0 -z-10 opacity-[0.075] [background-image:radial-gradient(rgba(186,230,253,0.58)_0.45px,transparent_0.8px),radial-gradient(rgba(255,255,255,0.46)_0.45px,transparent_0.78px)] [background-position:0_0,7px_5px] [background-size:13px_13px,17px_17px]" />
 
-      <section className="relative grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
+      <section className="relative isolate grid min-w-0 gap-8 before:pointer-events-none before:absolute before:inset-x-[-4rem] before:top-[-5.75rem] before:-z-10 before:h-[31rem] before:bg-[radial-gradient(ellipse_at_32%_30%,rgba(186,230,253,0.155),rgba(56,189,248,0.095)_28%,rgba(15,23,42,0.18)_48%,transparent_75%)] before:blur-2xl after:pointer-events-none after:absolute after:inset-x-[-2rem] after:top-[2.25rem] after:-z-10 after:h-px after:bg-gradient-to-r after:from-transparent after:via-cyan-100/32 after:to-transparent lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
         <NextActionPanel
           action={dashboard.nextAction}
           canComplete={canCompleteAction}
@@ -557,7 +560,7 @@ export default function HomePage() {
         />
       </section>
 
-      <section className="relative grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
+      <section className="relative isolate grid min-w-0 gap-8 before:pointer-events-none before:absolute before:inset-x-[-1rem] before:top-[-2rem] before:-z-10 before:h-[18rem] before:bg-[linear-gradient(180deg,rgba(2,6,11,0.26),rgba(2,6,11,0.62)_50%,transparent)] before:blur-xl lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
         <div className="min-w-0 space-y-6">
           <DailyChecksPanel
             checks={dashboard.dailyChecks}
@@ -589,7 +592,7 @@ function CommandPanel({
 }) {
   return (
     <section
-      className={`system-panel min-w-0 rounded-3xl border-white/[0.12] bg-[radial-gradient(circle_at_16%_0%,rgba(148,163,184,0.11),transparent_34%),radial-gradient(circle_at_86%_4%,rgba(45,212,191,0.045),transparent_35%),linear-gradient(180deg,rgba(18,23,30,0.92),rgba(9,11,16,0.96)_38%,rgba(4,5,8,0.96))] shadow-[0_8px_30px_rgba(0,0,0,0.62),0_28px_80px_rgba(0,0,0,0.54),inset_0_1px_0_rgba(255,255,255,0.065)] backdrop-blur-xl ${className}`}
+      className={`system-panel min-w-0 rounded-3xl border-white/[0.12] bg-[radial-gradient(circle_at_16%_0%,rgba(148,163,184,0.095),transparent_34%),radial-gradient(circle_at_86%_4%,rgba(45,212,191,0.035),transparent_35%),linear-gradient(180deg,rgba(18,23,30,0.94),rgba(9,11,16,0.97)_38%,rgba(4,5,8,0.965))] shadow-[0_8px_30px_rgba(0,0,0,0.64),0_30px_86px_rgba(0,0,0,0.56),inset_0_1px_0_rgba(255,255,255,0.07)] backdrop-blur-xl ${className}`}
     >
       <div className="pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-cyan-100/28 to-transparent" />
       <div className="pointer-events-none absolute inset-x-8 bottom-0 h-px bg-gradient-to-r from-transparent via-cyan-300/10 to-transparent" />
@@ -614,17 +617,18 @@ function NextActionPanel({
   const isUrgent = action.tone === "urgent";
 
   return (
-    <CommandPanel className="min-h-[23rem] border-cyan-100/[0.14] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.68),0_36px_110px_rgba(0,0,0,0.64),0_0_86px_rgba(14,165,233,0.08),inset_0_1px_0_rgba(255,255,255,0.08)] sm:p-7 lg:p-8">
-      <div className="pointer-events-none absolute inset-x-8 top-0 h-28 bg-[radial-gradient(ellipse_at_50%_0%,rgba(125,211,252,0.16),transparent_68%)]" />
+    <CommandPanel className="min-h-[23rem] border-cyan-100/[0.22] bg-[radial-gradient(circle_at_9%_0%,rgba(224,242,254,0.2),rgba(125,211,252,0.085)_30%,transparent_45%),radial-gradient(circle_at_88%_12%,rgba(45,212,191,0.068),transparent_36%),linear-gradient(180deg,rgba(25,35,50,0.99),rgba(8,11,17,0.99)_45%,rgba(3,5,9,0.975))] p-6 shadow-[0_12px_38px_rgba(0,0,0,0.78),0_48px_150px_rgba(0,0,0,0.74),0_0_128px_rgba(14,165,233,0.18),inset_0_1px_0_rgba(255,255,255,0.13),inset_0_0_0_1px_rgba(186,230,253,0.03)] transition-[transform,box-shadow,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:border-cyan-100/26 hover:shadow-[0_14px_42px_rgba(0,0,0,0.79),0_52px_158px_rgba(0,0,0,0.75),0_0_136px_rgba(14,165,233,0.2),inset_0_1px_0_rgba(255,255,255,0.14),inset_0_0_0_1px_rgba(186,230,253,0.038)] sm:p-7 lg:p-8">
+      <div className="pointer-events-none absolute inset-x-4 top-0 h-44 bg-[radial-gradient(ellipse_at_24%_0%,rgba(240,249,255,0.27),rgba(125,211,252,0.105)_41%,transparent_75%)]" />
+      <div className="pointer-events-none absolute left-7 top-[8.35rem] h-px w-[84%] bg-gradient-to-r from-cyan-50/58 via-cyan-100/22 to-transparent" />
       <div className="flex h-full flex-col justify-between gap-8">
-        <div className="space-y-3">
-          <p className="system-label tracking-[0.22em] text-cyan-50/42">Current Focus</p>
+        <div className="space-y-2.5">
+          <p className="system-label text-[0.58rem] tracking-[0.34em] text-cyan-50/36">Current Focus</p>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h1 className="text-3xl font-semibold tracking-tight text-white drop-shadow-[0_0_26px_rgba(255,255,255,0.08)] sm:text-5xl">
+              <h1 className="text-[2.15rem] font-semibold leading-none tracking-tight text-white drop-shadow-[0_0_28px_rgba(186,230,253,0.1)] sm:text-[3.25rem]">
                 Next Action
               </h1>
-              <p className="mt-2.5 max-w-2xl text-sm leading-6 text-white/62 sm:text-base">
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/55 sm:text-[0.96rem]">
                 The clearest action across planner, academics, and fitness based on the current app state.
               </p>
             </div>
@@ -632,24 +636,26 @@ function NextActionPanel({
         </div>
 
         <div
-          className={`relative overflow-hidden rounded-[1.4rem] border p-6 shadow-[0_8px_30px_rgba(0,0,0,0.74),0_34px_100px_rgba(0,0,0,0.62),0_0_54px_rgba(34,211,238,0.085),inset_0_1px_0_rgba(255,255,255,0.095)] before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-24 before:bg-[linear-gradient(180deg,rgba(255,255,255,0.095),transparent)] after:pointer-events-none after:absolute after:inset-0 after:bg-[radial-gradient(circle_at_18%_0%,rgba(125,211,252,0.12),transparent_42%),radial-gradient(circle_at_86%_100%,rgba(20,184,166,0.07),transparent_34%)] sm:p-7 ${
+          className={`relative overflow-hidden rounded-[1.45rem] border p-6 shadow-[0_12px_38px_rgba(0,0,0,0.82),0_42px_128px_rgba(0,0,0,0.7),0_0_92px_rgba(34,211,238,0.16),inset_0_1px_0_rgba(255,255,255,0.17),inset_0_0_0_1px_rgba(255,255,255,0.026)] backdrop-blur-md transition-[transform,filter,border-color,box-shadow] duration-200 ease-out before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-36 before:bg-[linear-gradient(123deg,rgba(255,255,255,0.2),rgba(186,230,253,0.12)_22%,rgba(125,211,252,0.055)_40%,transparent_76%)] after:pointer-events-none after:absolute after:inset-0 after:bg-[radial-gradient(circle_at_13%_0%,rgba(240,249,255,0.23),transparent_40%),linear-gradient(112deg,rgba(255,255,255,0.078),transparent_37%,rgba(45,212,191,0.064)_74%,transparent),radial-gradient(circle_at_0%_100%,rgba(14,165,233,0.12),transparent_38%)] hover:-translate-y-0.5 hover:brightness-[1.045] sm:p-7 ${
             isUrgent
-              ? "border-rose-200/25 border-l-2 border-l-red-400/40 bg-[linear-gradient(180deg,rgba(244,63,94,0.1),rgba(255,255,255,0.055)_48%,rgba(8,10,14,0.76))]"
-              : "border-cyan-100/[0.16] bg-[linear-gradient(180deg,rgba(255,255,255,0.1),rgba(15,23,42,0.36)_50%,rgba(5,8,12,0.8))]"
+              ? "border-rose-200/32 border-l-2 border-l-red-400/45 bg-[linear-gradient(180deg,rgba(244,63,94,0.12),rgba(255,255,255,0.08)_48%,rgba(8,10,14,0.84))]"
+              : "border-cyan-100/[0.28] bg-[linear-gradient(145deg,rgba(255,255,255,0.165),rgba(15,23,42,0.56)_45%,rgba(4,8,13,0.88))]"
           }`}
         >
+          <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-cyan-50/54 to-transparent" />
+          <div className="pointer-events-none absolute inset-y-6 left-0 w-px bg-gradient-to-b from-transparent via-cyan-100/34 to-transparent" />
           <div className="relative flex flex-col gap-5">
             <div className="min-w-0 space-y-3">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="system-pill border-cyan-100/[0.14] bg-cyan-100/[0.06] px-3.5 py-1.5 text-[11px] font-semibold text-cyan-50/84 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                <span className="system-pill border-cyan-100/[0.11] bg-cyan-50/[0.065] px-3.5 py-1.5 text-[11px] font-semibold text-cyan-50/84 shadow-[0_8px_22px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.065)]">
                   {action.source}
                 </span>
                 {action.timingLabel ? (
                   <span
-                    className={`rounded-full border px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] shadow-[inset_0_1px_0_rgba(255,255,255,0.045)] ${
+                    className={`rounded-full border px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] shadow-[0_8px_22px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.05)] ${
                       isUrgent
-                        ? "border-rose-200/25 bg-rose-200/[0.095] text-rose-50/90"
-                        : "border-cyan-100/[0.13] bg-white/[0.055] text-white/74"
+                        ? "border-rose-200/22 bg-rose-200/[0.09] text-rose-50/88"
+                        : "border-cyan-100/[0.105] bg-white/[0.06] text-white/72"
                     }`}
                   >
                     {hasHydrated ? action.timingLabel : "Loading"}
@@ -671,7 +677,7 @@ function NextActionPanel({
         <div className="flex flex-col gap-3 sm:flex-row">
           <button
             type="button"
-            className="system-button-primary inline-flex min-w-[10rem] items-center justify-center rounded-[16px] border-cyan-50/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(203,245,255,0.88))] px-5 py-3 text-sm font-semibold shadow-[0_18px_48px_rgba(0,0,0,0.54),0_0_34px_rgba(34,211,238,0.13),inset_0_1px_0_rgba(255,255,255,0.62)] transition-all duration-150 hover:border-cyan-50 hover:bg-white/10"
+            className="system-button-primary inline-flex min-w-[10rem] items-center justify-center rounded-[16px] border-cyan-50/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(203,245,255,0.9))] px-5 py-3 text-sm font-semibold shadow-[0_18px_48px_rgba(0,0,0,0.56),0_0_38px_rgba(34,211,238,0.16),inset_0_1px_0_rgba(255,255,255,0.66)] transition-all duration-150 hover:-translate-y-0.5 hover:border-cyan-50 hover:shadow-[0_20px_52px_rgba(0,0,0,0.58),0_0_42px_rgba(34,211,238,0.2),inset_0_1px_0_rgba(255,255,255,0.68)]"
             disabled={!hasHydrated || action.tone === "clear"}
             onClick={onStartFocus}
           >
@@ -679,7 +685,7 @@ function NextActionPanel({
           </button>
           <button
             type="button"
-            className="system-button-secondary inline-flex min-w-[10rem] items-center justify-center rounded-[16px] border-cyan-100/[0.13] bg-white/[0.035] px-5 py-3 text-sm font-semibold text-white/74 shadow-[0_14px_34px_rgba(0,0,0,0.36),inset_0_1px_0_rgba(255,255,255,0.035)] transition-all duration-150 hover:border-cyan-100/20 hover:bg-white/10"
+            className="system-button-secondary inline-flex min-w-[10rem] items-center justify-center rounded-[16px] border-cyan-100/[0.11] bg-white/[0.028] px-5 py-3 text-sm font-semibold text-white/68 shadow-[0_14px_34px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.03)] transition-all duration-150 hover:-translate-y-0.5 hover:border-cyan-100/[0.18] hover:bg-white/[0.055] hover:text-white/78"
             disabled={!hasHydrated || !canComplete}
             onClick={onMarkComplete}
             title={canComplete ? undefined : "This action needs exact logging on its source page."}
@@ -724,7 +730,7 @@ function SystemStatusPanel({
   workoutComplete: boolean;
 }) {
   return (
-    <CommandPanel className="p-6 shadow-[0_8px_30px_rgba(0,0,0,0.62),0_24px_70px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.06)]">
+    <CommandPanel className="border-cyan-100/[0.11] bg-[radial-gradient(circle_at_50%_0%,rgba(186,230,253,0.082),transparent_32%),linear-gradient(180deg,rgba(13,18,27,0.965),rgba(4,6,11,0.972))] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.68),0_28px_80px_rgba(0,0,0,0.58),0_0_58px_rgba(14,165,233,0.055),inset_0_1px_0_rgba(255,255,255,0.064)]">
       <div className="space-y-5">
         <div className="space-y-3">
           <p className="system-label tracking-[0.22em] text-white/40">System Status</p>
@@ -737,7 +743,7 @@ function SystemStatusPanel({
                 Live Readiness Index
               </p>
             </div>
-            <p className="text-3xl font-semibold tracking-tight text-white drop-shadow-[0_0_18px_rgba(125,211,252,0.1)]">
+            <p className="rounded-2xl border border-cyan-100/[0.08] bg-white/[0.025] px-5 py-3 text-3xl font-semibold tracking-tight text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_0_28px_rgba(34,211,238,0.07)] drop-shadow-[0_0_18px_rgba(125,211,252,0.12)]">
               {hasHydrated ? readinessScore : "--"}
               <span className="text-sm text-white/42">/100</span>
             </p>
@@ -758,13 +764,13 @@ function SystemStatusPanel({
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-1.5 rounded-[18px] border border-white/[0.105] bg-black/20 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
+        <div className="grid grid-cols-3 gap-1.5 rounded-[18px] border border-cyan-100/[0.105] bg-black/24 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_12px_30px_rgba(0,0,0,0.24)]">
           <StatusMetric label="Overdue" value={hasHydrated ? String(overdueCount) : "--"} active={overdueCount > 0} />
           <StatusMetric label="Today" value={hasHydrated ? String(dueTodayCount) : "--"} active={dueTodayCount > 0} emphasized />
           <StatusMetric label="At Risk" value={hasHydrated ? String(atRiskCount) : "--"} active={atRiskCount > 0} />
         </div>
 
-        <div className="rounded-[18px] border border-white/[0.11] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.018))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.045)]">
+        <div className="rounded-[18px] border border-cyan-100/[0.105] bg-[radial-gradient(circle_at_20%_0%,rgba(125,211,252,0.064),transparent_38%),linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.018))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.052),0_14px_34px_rgba(0,0,0,0.3)]">
           <div className="mb-3 flex items-center justify-between gap-3">
             <p className="system-label tracking-[0.22em] text-white/40">Fitness Signal</p>
             <span className="text-xs font-semibold text-white/58">{workoutComplete ? "Workout logged" : "Workout open"}</span>
@@ -836,7 +842,7 @@ function DailyChecksPanel({
   workoutStreak: number;
 }) {
   return (
-    <CommandPanel className="p-6 shadow-[0_8px_30px_rgba(0,0,0,0.62),0_24px_72px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.06)]">
+    <CommandPanel className="border-white/[0.09] bg-[radial-gradient(circle_at_18%_0%,rgba(125,211,252,0.045),transparent_36%),linear-gradient(180deg,rgba(13,17,24,0.94),rgba(4,6,10,0.97))] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.7),0_24px_72px_rgba(0,0,0,0.58),inset_0_1px_0_rgba(255,255,255,0.052)]">
       <div className="space-y-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
@@ -950,7 +956,7 @@ function TodayPressureStrip({
   overdueCount: number;
 }) {
   return (
-    <div className="rounded-[18px] border border-white/[0.105] bg-[radial-gradient(circle_at_18%_0%,rgba(125,211,252,0.055),transparent_40%),linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.016))] px-4 py-3.5 shadow-[0_16px_44px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.045)] sm:px-5">
+    <div className="rounded-[18px] border border-cyan-100/[0.115] bg-[radial-gradient(circle_at_18%_0%,rgba(125,211,252,0.078),transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.017))] px-4 py-3.5 shadow-[0_16px_44px_rgba(0,0,0,0.46),0_0_42px_rgba(14,165,233,0.055),inset_0_1px_0_rgba(255,255,255,0.052)] sm:px-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="system-label tracking-[0.22em] text-white/40">Today Pressure</p>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -967,10 +973,10 @@ function TodayPressureStrip({
 function PressureItem({ active, label, value }: { active: boolean; label: string; value: string }) {
   return (
     <div
-      className={`min-w-[5rem] rounded-[14px] border px-3 py-2 ${
+      className={`min-w-[5rem] rounded-[14px] border px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.032)] ${
         active
-          ? "border-cyan-100/[0.15] bg-cyan-100/[0.045] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]"
-          : "border-white/[0.055] bg-black/18"
+          ? "border-cyan-100/[0.17] bg-cyan-100/[0.055] text-cyan-50"
+          : "border-white/[0.06] bg-black/22"
       }`}
     >
       <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-white/42">{label}</p>
