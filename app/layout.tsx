@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { FocusModeBar } from "@/components/focus/focus-mode-bar";
 import { FocusLayoutShell } from "@/components/focus/focus-layout-shell";
@@ -10,6 +10,30 @@ import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 export const metadata: Metadata = {
   title: "Campus Life OS",
   description: "A polished student dashboard foundation.",
+  applicationName: "Campus Life OS",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Campus OS",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  icons: {
+    icon: [
+      { url: "/icons/icon.svg", type: "image/svg+xml" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      { url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#020203",
 };
 
 export default function RootLayout({

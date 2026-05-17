@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Campus Life OS icon">
+  <rect width="512" height="512" rx="112" fill="#020203"/>
+  <rect x="38" y="38" width="436" height="436" rx="88" fill="#080a0d" stroke="#2b3038" stroke-width="2"/>
+  <path d="M108 164c0-31 25-56 56-56h184c31 0 56 25 56 56v184c0 31-25 56-56 56H164c-31 0-56-25-56-56V164Z" fill="#0e1218" stroke="#3a404b" stroke-width="4"/>
+  <path d="M154 176h204M154 256h204M154 336h126" stroke="#d8dde8" stroke-width="18" stroke-linecap="round"/>
+  <circle cx="352" cy="336" r="26" fill="#6d7dff"/>
+  <circle cx="352" cy="336" r="10" fill="#f8fbff"/>
+</svg>
