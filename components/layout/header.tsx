@@ -18,18 +18,81 @@ type HeaderAuthState =
 const authActionClassName =
   "system-button-secondary inline-flex items-center px-2.5 py-1.5 text-xs font-semibold sm:px-4 sm:py-2 sm:text-sm";
 
+function getAuthStateFromSession(session: Session | null): HeaderAuthState {
+  return session?.user
+    ? {
+        status: "signed-in",
+        email: session.user.email ?? "Signed in",
+      }
+    : { status: "signed-out", email: null };
+}
+
+function readHashSessionTokens() {
+  if (typeof window === "undefined" || !window.location.hash) {
+    return null;
+  }
+
+  const hashParams = new URLSearchParams(window.location.hash.slice(1));
+  const accessToken = hashParams.get("access_token");
+  const refreshToken = hashParams.get("refresh_token");
+
+  if (!accessToken || !refreshToken) {
+    return null;
+  }
+
+  return {
+    accessToken,
+    refreshToken,
+  };
+}
+
+function clearAuthHashFromUrl() {
+  if (typeof window === "undefined" || !window.location.hash) {
+    return;
+  }
+
+  window.history.replaceState(
+    window.history.state,
+    document.title,
+    `${window.location.pathname}${window.location.search}`,
+  );
+}
+
 export function Header() {
   const [authState, setAuthState] = useState<HeaderAuthState>({
     status: "loading",
     email: null,
   });
   const authStatusRef = useRef<HeaderAuthState["status"]>("loading");
+  const isCheckingSessionRef = useRef(true);
 
   useEffect(() => {
     let isMounted = true;
 
     async function loadSession() {
       try {
+        const hashTokens = readHashSessionTokens();
+
+        if (hashTokens) {
+          const { data: setSessionData, error: setSessionError } = await supabase.auth.setSession({
+            access_token: hashTokens.accessToken,
+            refresh_token: hashTokens.refreshToken,
+          });
+
+          if (setSessionError) {
+            throw setSessionError;
+          }
+
+          if (isMounted) {
+            setSupabaseOffline(false);
+            const nextState = getAuthStateFromSession(setSessionData.session);
+            authStatusRef.current = nextState.status;
+            setAuthState(nextState);
+          }
+
+          clearAuthHashFromUrl();
+        }
+
         const { data, error } = await supabase.auth.getSession();
 
         if (!isMounted) {
@@ -41,12 +104,8 @@ export function Header() {
         }
 
         setSupabaseOffline(false);
-        const nextState: HeaderAuthState = data.session?.user
-          ? {
-              status: "signed-in",
-              email: data.session.user.email ?? "Signed in",
-            }
-          : { status: "signed-out", email: null };
+        const nextState = getAuthStateFromSession(data.session);
+        isCheckingSessionRef.current = false;
         authStatusRef.current = nextState.status;
         setAuthState(nextState);
       } catch {
@@ -55,6 +114,7 @@ export function Header() {
         }
 
         setSupabaseOffline(true);
+        isCheckingSessionRef.current = false;
         authStatusRef.current = "offline";
         setAuthState({ status: "offline", email: null });
       }
@@ -64,15 +124,17 @@ export function Header() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
+    } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
       if (session?.user) {
-        const nextState: HeaderAuthState = {
-          status: "signed-in",
-          email: session.user.email ?? "Signed in",
-        };
+        const nextState = getAuthStateFromSession(session);
         setSupabaseOffline(false);
+        isCheckingSessionRef.current = false;
         authStatusRef.current = nextState.status;
         setAuthState(nextState);
+        return;
+      }
+
+      if (isCheckingSessionRef.current && event !== "SIGNED_OUT") {
         return;
       }
 
@@ -81,6 +143,7 @@ export function Header() {
       }
 
       setSupabaseOffline(false);
+      isCheckingSessionRef.current = false;
       authStatusRef.current = "signed-out";
       setAuthState({ status: "signed-out", email: null });
     });
