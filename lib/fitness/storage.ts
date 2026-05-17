@@ -11,6 +11,7 @@ export type FitnessDayLog = {
 export type FitnessGoals = {
   caloriesGoal: number;
   proteinGoal: number;
+  weeklyWorkoutGoal: number;
 };
 
 export type FitnessState = {
@@ -37,6 +38,7 @@ const FITNESS_STATE_UPDATED_EVENT = "campus-life-os.fitness-updated";
 export const DEFAULT_FITNESS_GOALS: FitnessGoals = {
   caloriesGoal: 4000,
   proteinGoal: 180,
+  weeklyWorkoutGoal: 7,
 };
 
 function isDateKey(value: unknown): value is string {
@@ -103,6 +105,15 @@ function normalizeGoals(value: unknown): FitnessGoals {
   return {
     caloriesGoal: normalizeNonNegativeNumber(parsed.caloriesGoal, DEFAULT_FITNESS_GOALS.caloriesGoal),
     proteinGoal: normalizeNonNegativeNumber(parsed.proteinGoal, DEFAULT_FITNESS_GOALS.proteinGoal),
+    weeklyWorkoutGoal: Math.min(
+      14,
+      Math.max(
+        1,
+        Math.round(
+          normalizeNonNegativeNumber(parsed.weeklyWorkoutGoal, DEFAULT_FITNESS_GOALS.weeklyWorkoutGoal),
+        ),
+      ),
+    ),
   };
 }
 

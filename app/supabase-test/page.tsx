@@ -22,21 +22,21 @@ export default async function SupabaseTestPage() {
   return (
     <section className="space-y-4">
       <div className="space-y-2">
-        <p className="text-sm font-semibold uppercase tracking-[0.3em] text-white/45">
+        <p className="system-label">
           Supabase Test
         </p>
-        <h1 className="text-3xl font-semibold text-white">
+        <h1 className="system-page-heading text-3xl">
           {status === "Supabase is connected"
             ? "Supabase is connected"
             : "Supabase foundation check"}
         </h1>
-        <p className="text-sm text-white/50">
+        <p className="system-page-copy text-sm">
           This page only verifies that the App Router helper can be created.
           It does not query any tables yet.
         </p>
       </div>
 
-      <div className="system-card-interactive relative overflow-hidden rounded-3xl border border-white/[0.06] bg-[#0a0a0c] p-6 shadow-[0_28px_80px_rgba(0,0,0,0.55)] transition-all duration-300 ease-out hover:-translate-y-[1px] hover:border-white/[0.12] hover:shadow-[0_12px_40px_rgba(0,0,0,0.75)] before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-20 before:bg-[linear-gradient(180deg,rgba(255,255,255,0.04),transparent)]">
+      <div className="system-panel system-card-shell system-card-interactive relative overflow-hidden p-6 transition-all duration-300 ease-out">
         <dl className="relative space-y-3 text-sm text-white/60">
           <div className="flex items-center justify-between gap-4">
             <dt>Supabase status</dt>

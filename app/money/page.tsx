@@ -4,8 +4,8 @@ export default function MoneyPage() {
   return (
     <div className="animate-fadeIn space-y-6 sm:space-y-7 lg:space-y-9">
       <section className="space-y-2">
-        <h2 className="text-2xl font-semibold tracking-tight text-white">Money</h2>
-        <p className="mt-1 text-sm text-white/50">Spending awareness and savings momentum.</p>
+        <h2 className="system-page-heading text-2xl">Money</h2>
+        <p className="system-page-copy mt-1 text-sm">Spending awareness and savings momentum.</p>
       </section>
 
       <section className="mt-14 grid gap-4 border-t border-white/[0.05] pt-7 md:grid-cols-2 xl:grid-cols-3">
@@ -33,7 +33,7 @@ export default function MoneyPage() {
           subtitle="6-month trend"
           variant="dark"
         >
-          <div className="system-subtle-panel system-card-interactive h-56 rounded-[16px] border border-dashed border-white/[0.05] p-4 text-sm text-white/46">
+          <div className="system-inset-panel system-card-interactive h-56 rounded-[16px] border border-dashed border-white/[0.08] p-4 text-sm text-white/46">
             Placeholder chart: Jan $710, Feb $640, Mar $588...
           </div>
         </Card>

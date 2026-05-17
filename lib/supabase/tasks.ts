@@ -1,9 +1,7 @@
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient } from "@/lib/supabase/client";
+import { setSupabaseOffline } from "@/lib/supabase/offline";
 
-const supabase = createBrowserClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-);
+const supabase = createClient();
 
 export type SupabaseTask = {
   id: string;
@@ -37,33 +35,34 @@ function mapTaskRow(row: Partial<SupabaseTask> | null): SupabaseTask | null {
   };
 }
 
-export async function fetchTasks(): Promise<SupabaseTask[]> {
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError) {
-    console.error("User fetch error:", userError);
+export async function fetchTasks(userId: string | null): Promise<SupabaseTask[]> {
+  if (!userId) {
     return [];
   }
 
-  if (!user) {
-    console.error("No user found");
-    return [];
-  }
+  let data: unknown[] | null = null;
+  let error: unknown = null;
 
-  const { data, error } = await supabase
-    .from("planner_tasks")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("due_date", { ascending: true })
-    .order("created_at", { ascending: false });
+  try {
+    const response = await supabase
+      .from("planner_tasks")
+      .select("*")
+      .eq("user_id", userId)
+      .order("due_date", { ascending: true })
+      .order("created_at", { ascending: false });
+
+    data = response.data;
+    error = response.error;
+  } catch (requestError) {
+    error = requestError;
+  }
 
   if (error) {
-    console.error("Fetch error:", error);
+    setSupabaseOffline(true);
     return [];
   }
+
+  setSupabaseOffline(false);
 
   return (data ?? [])
     .map((row) => mapTaskRow(row as Partial<SupabaseTask>))
@@ -75,80 +74,107 @@ export async function addTask(task: {
   due_date: string;
   category: string;
   note?: string;
-}): Promise<SupabaseTask | null> {
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError) {
-    console.error("User fetch error:", userError);
+}, userId: string | null): Promise<SupabaseTask | null> {
+  if (!userId) {
     return null;
   }
 
-  if (!user) {
-    console.error("No user found");
-    return null;
-  }
+  let data: unknown = null;
+  let error: unknown = null;
 
-  const { data, error } = await supabase
-    .from("planner_tasks")
-    .insert([
-      {
-        ...task,
-        user_id: user.id,
-      },
-    ])
-    .select()
-    .single();
+  try {
+    const response = await supabase
+      .from("planner_tasks")
+      .insert([
+        {
+          ...task,
+          user_id: userId,
+        },
+      ])
+      .select()
+      .single();
+
+    data = response.data;
+    error = response.error;
+  } catch (requestError) {
+    error = requestError;
+  }
 
   if (error) {
-    console.error("Insert error:", error);
+    setSupabaseOffline(true);
     return null;
   }
+
+  setSupabaseOffline(false);
 
   return mapTaskRow(data as Partial<SupabaseTask>);
 }
 
-export async function updateTaskCompletion(id: string, completed: boolean) {
+export async function updateTaskCompletion(id: string, completed: boolean, userId: string | null): Promise<SupabaseTask | null> {
+  if (!userId) {
+    return null;
+  }
+
   const updates = {
     completed,
     completed_at: completed ? new Date().toISOString() : null,
   };
 
-  console.log("updateTaskCompletion called", {
-    id,
-    completed,
-    completed_at: updates.completed_at,
-  });
+  let data: unknown[] | null = null;
+  let error: unknown = null;
 
-  const { data, error } = await supabase
-    .from("planner_tasks")
-    .update(updates)
-    .eq("id", id)
-    .select();
+  try {
+    const response = await supabase
+      .from("planner_tasks")
+      .update(updates)
+      .eq("id", id)
+      .eq("user_id", userId)
+      .select();
 
-  console.log("updateTaskCompletion response", { data, error });
+    data = response.data;
+    error = response.error;
+  } catch (requestError) {
+    error = requestError;
+  }
 
   if (error) {
-    console.error("Update error:", error);
+    setSupabaseOffline(true);
     return null;
   }
 
-  return data?.[0] ?? null;
+  setSupabaseOffline(false);
+
+  return mapTaskRow((data?.[0] ?? null) as Partial<SupabaseTask> | null);
 }
 
-export async function archiveTask(id: string) {
-  const { data, error } = await supabase
-    .from("planner_tasks")
-    .update({ archived: true })
-    .eq("id", id)
-    .select();
-
-  if (error) {
-    console.error("Archive error:", error);
+export async function archiveTask(id: string, userId: string | null): Promise<SupabaseTask | null> {
+  if (!userId) {
     return null;
   }
 
-  return data?.[0] ?? null;
+  let data: unknown[] | null = null;
+  let error: unknown = null;
+
+  try {
+    const response = await supabase
+      .from("planner_tasks")
+      .update({ archived: true })
+      .eq("id", id)
+      .eq("user_id", userId)
+      .select();
+
+    data = response.data;
+    error = response.error;
+  } catch (requestError) {
+    error = requestError;
+  }
+
+  if (error) {
+    setSupabaseOffline(true);
+    return null;
+  }
+
+  setSupabaseOffline(false);
+
+  return mapTaskRow((data?.[0] ?? null) as Partial<SupabaseTask> | null);
 }

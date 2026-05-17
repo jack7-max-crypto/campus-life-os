@@ -14,11 +14,13 @@ function isCurrentPath(pathname: string, href: string) {
 
 export function MobileBottomNav() {
   const pathname = usePathname();
+  const mobileNavItems = navItems.filter((item) => item.href !== "/money");
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-white/[0.05] bg-[#010102]/98 px-2 pt-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] lg:hidden">
-      <div className="mx-auto grid max-w-md grid-cols-6 gap-1">
-        {navItems.map((item) => {
+    <nav className="system-mobile-chrome fixed inset-x-0 bottom-0 z-30 px-1 pt-1 pb-[calc(env(safe-area-inset-bottom)+0.2rem)] lg:hidden">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.12),rgba(190,194,204,0.045),transparent)]" />
+      <div className="relative mx-auto grid w-full max-w-[min(19rem,calc(100vw-0.65rem))] grid-cols-5 gap-0">
+        {mobileNavItems.map((item) => {
           const isActive = isCurrentPath(pathname, item.href);
           const Icon = item.icon;
 
@@ -27,14 +29,18 @@ export function MobileBottomNav() {
               key={item.href}
               href={item.href}
               aria-current={isActive ? "page" : undefined}
-              className={`flex min-h-[4rem] flex-col items-center justify-center gap-1 rounded-[18px] px-1.5 py-2 text-center transition-all duration-200 ${
+              className={`system-nav-pill flex min-h-[2.45rem] min-w-0 flex-col items-center justify-center gap-0.5 rounded-[11px] px-0.5 py-0.5 text-center ${
                 isActive
-                  ? "border border-white/[0.08] bg-[#09090a] text-white shadow-[0_12px_28px_rgba(0,0,0,0.34)]"
-                  : "border border-transparent text-white/42 hover:-translate-y-[1px] hover:border-white/[0.08] hover:bg-[#070708] hover:text-white/72"
+                  ? "system-nav-pill-active"
+                  : ""
               }`}
             >
-              <Icon className="h-5 w-5" />
-              <span className="text-[11px] font-medium leading-none">{item.label}</span>
+              <Icon className="h-3.5 w-3.5 shrink-0" />
+              <span
+                className="max-w-full truncate font-mono text-[7.5px] font-bold leading-none"
+              >
+                {item.label}
+              </span>
             </Link>
           );
         })}

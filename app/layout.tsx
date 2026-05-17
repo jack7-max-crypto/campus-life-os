@@ -19,15 +19,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full">
-      <body className="min-h-screen bg-[#010102] text-white antialiased">
+      <body className="min-h-screen bg-black text-white antialiased">
         <FocusProvider>
-          <div className="pointer-events-none fixed inset-0">
-            <div className="absolute inset-0 bg-[linear-gradient(180deg,#050506_0%,#020203_24%,#010102_100%)]" />
-            <div className="absolute inset-0 system-grain" />
-            <div className="absolute inset-x-[-20rem] top-[-18rem] h-[32rem] system-radial-light opacity-60" />
-            <div className="absolute inset-x-0 top-0 h-64 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.024),transparent_48%)]" />
-            <div className="absolute inset-y-0 right-0 w-[28rem] bg-[linear-gradient(270deg,rgba(255,255,255,0.025),transparent_62%)] opacity-20" />
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/8 to-transparent" />
+          <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+            <div className="absolute inset-0 system-background-field" />
+            <div className="absolute inset-0 system-ambient-glow-field" />
+            <div className="absolute inset-0 system-directional-light" />
+            <div className="absolute inset-0 system-grain opacity-[0.025]" />
+            <div className="absolute inset-0 system-atmosphere-layer" />
+            <div className="absolute inset-x-[-16rem] top-[-15rem] h-[26rem] system-radial-light opacity-[0.12]" />
+            <div className="absolute inset-x-[-10rem] top-[6.25rem] h-16 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.026)_28%,rgba(128,112,216,0.012)_46%,transparent_72%)] blur-md" />
+            <div className="absolute inset-x-[-10rem] top-[6.8rem] h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.11)_26%,rgba(180,184,194,0.045)_48%,transparent_74%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_0%_0%,transparent_0%,transparent_32%,rgba(0,0,0,0.18)_58%,rgba(0,0,0,0.62)_100%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_82%_82%,transparent_0%,rgba(0,0,0,0.32)_46%,rgba(0,0,0,0.74)_100%)]" />
           </div>
 
           <FocusLayoutShell

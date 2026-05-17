@@ -1,9 +1,7 @@
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient } from "@/lib/supabase/client";
+import { setSupabaseOffline } from "@/lib/supabase/offline";
 
-const supabase = createBrowserClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-);
+const supabase = createClient();
 
 export type SupabaseStreak = {
   id: string;
@@ -33,13 +31,17 @@ export async function getCurrentUser() {
   const {
     data: { user },
     error,
-  } = await supabase.auth.getUser();
+  } = await supabase.auth.getUser().catch((error: unknown) => ({
+    data: { user: null },
+    error,
+  }));
 
   if (error) {
-    console.error("User fetch error:", error);
+    setSupabaseOffline(true);
     return null;
   }
 
+  setSupabaseOffline(false);
   return user ?? null;
 }
 
@@ -50,18 +52,29 @@ export async function fetchStreaks(): Promise<SupabaseStreak[]> {
     return [];
   }
 
-  const { data, error } = await supabase
-    .from("wellness_streaks")
-    .select("*")
-    .eq("user_id", user.id);
+  let data: unknown[] | null = null;
+  let error: unknown = null;
+
+  try {
+    const response = await supabase
+      .from("wellness_streaks")
+      .select("*")
+      .eq("user_id", user.id);
+
+    data = response.data;
+    error = response.error;
+  } catch (requestError) {
+    error = requestError;
+  }
 
   if (error) {
-    console.error("Fetch streaks error:", error);
+    setSupabaseOffline(true);
     return [];
   }
 
-  return (data ?? [])
-    .map((row) => mapStreakRow(row as Partial<SupabaseStreak>))
+  setSupabaseOffline(false);
+  return ((data ?? []) as unknown[])
+    .map((row: unknown) => mapStreakRow(row as Partial<SupabaseStreak>))
     .filter((row): row is SupabaseStreak => row !== null);
 }
 
@@ -76,54 +89,86 @@ export async function upsertStreak(
     return null;
   }
 
-  const { data: existing, error: selectError } = await supabase
-    .from("wellness_streaks")
-    .select("*")
-    .eq("user_id", user.id)
-    .eq("streak_type", streakType)
-    .single();
+  let existing: unknown = null;
+  let selectError: { code?: string } | unknown = null;
 
-  if (selectError && selectError.code !== "PGRST116") {
-    console.error("Select streak error:", selectError);
+  try {
+    const response = await supabase
+      .from("wellness_streaks")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("streak_type", streakType)
+      .single();
+
+    existing = response.data;
+    selectError = response.error;
+  } catch (requestError) {
+    selectError = requestError;
+  }
+
+  if (selectError && (!("code" in Object(selectError)) || Object(selectError).code !== "PGRST116")) {
+    setSupabaseOffline(true);
     return null;
   }
 
   if (existing) {
-    const { data, error } = await supabase
-      .from("wellness_streaks")
-      .update({
-        count,
-        last_completed: lastCompleted,
-      })
-      .eq("id", existing.id)
-      .select()
-      .single();
+    let data: unknown = null;
+    let error: unknown = null;
+
+    try {
+      const response = await supabase
+        .from("wellness_streaks")
+        .update({
+          count,
+          last_completed: lastCompleted,
+        })
+        .eq("id", (existing as SupabaseStreak).id)
+        .select()
+        .single();
+
+      data = response.data;
+      error = response.error;
+    } catch (requestError) {
+      error = requestError;
+    }
 
     if (error) {
-      console.error("Update streak error:", error);
+      setSupabaseOffline(true);
       return null;
     }
 
+    setSupabaseOffline(false);
     return mapStreakRow(data as Partial<SupabaseStreak>);
   }
 
-  const { data, error } = await supabase
-    .from("wellness_streaks")
-    .insert([
-      {
-        user_id: user.id,
-        streak_type: streakType,
-        count,
-        last_completed: lastCompleted,
-      },
-    ])
-    .select()
-    .single();
+  let data: unknown = null;
+  let error: unknown = null;
+
+  try {
+    const response = await supabase
+      .from("wellness_streaks")
+      .insert([
+        {
+          user_id: user.id,
+          streak_type: streakType,
+          count,
+          last_completed: lastCompleted,
+        },
+      ])
+      .select()
+      .single();
+
+    data = response.data;
+    error = response.error;
+  } catch (requestError) {
+    error = requestError;
+  }
 
   if (error) {
-    console.error("Insert streak error:", error);
+    setSupabaseOffline(true);
     return null;
   }
 
+  setSupabaseOffline(false);
   return mapStreakRow(data as Partial<SupabaseStreak>);
 }

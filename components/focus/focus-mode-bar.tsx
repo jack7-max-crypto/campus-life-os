@@ -37,8 +37,8 @@ export function FocusModeBar() {
 
   return (
     <aside className="pointer-events-none fixed inset-x-3 bottom-24 z-40 sm:inset-x-auto sm:right-6 sm:bottom-6 sm:w-[25rem]">
-      <div className="pointer-events-auto relative overflow-hidden rounded-[22px] border border-white/[0.07] bg-[#050506]/98 p-4 shadow-[0_22px_58px_rgba(0,0,0,0.68)]">
-        <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/14 to-transparent" />
+      <div className="system-panel system-card-shell pointer-events-auto relative overflow-hidden border-white/[0.13] p-4 shadow-[0_24px_76px_rgba(0,0,0,0.82),0_0_22px_rgba(255,255,255,0.025)]">
+        <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/22 to-transparent" />
         <div className="relative space-y-4">
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-3">
@@ -68,8 +68,8 @@ export function FocusModeBar() {
           </div>
 
           <div
-            className={`rounded-[18px] border border-white/[0.06] bg-[#070708]/96 px-4 py-3 ${
-              isComplete ? "animate-focusCompleteIn shadow-[0_0_32px_rgba(255,255,255,0.05)]" : ""
+            className={`system-inset-panel rounded-[18px] px-4 py-3 ${
+              isComplete ? "animate-focusCompleteIn shadow-[0_0_18px_rgba(92,190,160,0.1)]" : ""
             }`}
           >
             <p className="system-label">{isComplete ? "Complete" : "Timer"}</p>

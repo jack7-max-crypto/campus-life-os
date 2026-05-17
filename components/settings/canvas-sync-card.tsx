@@ -16,11 +16,11 @@ import type {
 } from "@/lib/integrations/canvas/types";
 
 const primaryButtonClassName =
-  "system-button-primary px-4 py-2.5 text-sm font-semibold disabled:border-white/30 disabled:bg-white/30 disabled:text-black/50";
+  "system-button-primary px-4 py-2.5 text-sm font-semibold disabled:border-white/30 disabled:bg-white/30 disabled:text-white/50";
 const secondaryButtonClassName =
   "system-button-secondary px-4 py-2.5 text-sm font-semibold";
 const noteClassName =
-  "system-subtle-panel rounded-[16px] px-3 py-2 text-sm text-white/70";
+  "system-inset-panel rounded-[16px] px-3 py-2 text-sm text-white/70";
 
 type SyncResponsePayload = {
   result?: CanvasSyncResult;
@@ -203,13 +203,13 @@ export function CanvasSyncCard() {
         </p>
 
         {notice ? (
-          <div className="rounded-xl border border-emerald-500/18 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
+          <div className="semantic-success rounded-xl px-3 py-2 text-sm">
             {notice}
           </div>
         ) : null}
 
         {errorMessage ? (
-          <div className="rounded-xl border border-rose-500/18 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">
+          <div className="semantic-danger rounded-xl px-3 py-2 text-sm">
             {errorMessage}
           </div>
         ) : null}

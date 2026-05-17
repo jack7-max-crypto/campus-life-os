@@ -19,11 +19,12 @@ export function Card({
 
   return (
     <section
-      className={`system-panel system-card-interactive relative overflow-hidden rounded-[24px] p-4 transition-all duration-300 ease-out md:p-5 ${className}`}
+      className={`system-panel system-card-shell system-card-interactive relative min-w-0 overflow-hidden p-2.5 transition-all duration-300 ease-out sm:p-4 md:p-5 ${className}`}
     >
-      <div className="pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-white/8 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/28 via-50% to-transparent" />
+      <div className="pointer-events-none absolute inset-y-6 left-0 w-px bg-gradient-to-b from-transparent via-white/12 to-transparent" />
 
-      <div className="relative mb-3 flex items-start justify-between gap-3 md:mb-4">
+      <div className="relative mb-1.5 flex items-start justify-between gap-3 sm:mb-3 md:mb-4">
         <div>
           {subtitle ? (
             <p
@@ -33,7 +34,7 @@ export function Card({
             </p>
           ) : null}
           <h3
-            className={`mt-2 text-[15px] font-semibold tracking-[-0.01em] ${
+            className={`mt-0.5 text-[0.86rem] font-bold tracking-normal sm:mt-2 sm:text-[15px] ${
               isDark ? "text-white" : "text-white"
             }`}
           >
@@ -41,7 +42,7 @@ export function Card({
           </h3>
         </div>
       </div>
-      <div className="relative space-y-3">{children}</div>
+      <div className="relative space-y-1.5 sm:space-y-3">{children}</div>
     </section>
   );
 }
@@ -59,14 +60,14 @@ export function MetricRow({
 
   return (
     <div
-      className={`system-subtle-panel system-card-interactive flex items-center justify-between rounded-xl border border-white/[0.05] bg-black/40 px-3 py-2 transition-all duration-300 ease-out hover:-translate-y-[1px] hover:border-white/[0.12] hover:shadow-[0_12px_40px_rgba(0,0,0,0.75)] ${
+      className={`system-stat-tile system-card-interactive flex min-w-0 items-center justify-between gap-2 rounded-xl px-2.5 py-1.5 transition-all duration-300 ease-out hover:-translate-y-[1px] hover:border-white/[0.16] sm:px-3 sm:py-2 ${
         isDark
           ? ""
           : ""
       }`}
     >
       <span
-        className={`text-sm ${
+        className={`min-w-0 truncate text-sm ${
           isDark
             ? "system-label"
             : "system-label"
@@ -74,7 +75,7 @@ export function MetricRow({
       >
         {label}
       </span>
-      <span className={`text-sm font-semibold tracking-[-0.01em] ${isDark ? "text-white" : "text-white"}`}>
+      <span className={`min-w-0 max-w-[45%] truncate text-right font-mono text-sm font-bold tracking-[-0.01em] ${isDark ? "text-white" : "text-white"}`}>
         {value}
       </span>
     </div>

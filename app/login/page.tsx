@@ -4,12 +4,18 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { setSupabaseOffline } from "@/lib/supabase/offline";
 
 type AuthAction = "sign-in" | "sign-up" | null;
 
+const supabase = createClient();
+
+function isFetchFailure(error: unknown) {
+  return error instanceof Error && error.message === "Failed to fetch";
+}
+
 export default function LoginPage() {
   const router = useRouter();
-  const [supabase] = useState(() => createClient());
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -26,17 +32,41 @@ export default function LoginPage() {
       password,
     };
 
-    const { error } =
-      action === "sign-in"
-        ? await supabase.auth.signInWithPassword(credentials)
-        : await supabase.auth.signUp(credentials);
+    const originalConsoleError = console.error;
+    console.error = (...args: Parameters<typeof console.error>) => {
+      if (args.some(isFetchFailure)) {
+        return;
+      }
+
+      originalConsoleError(...args);
+    };
+
+    const { error } = await (action === "sign-in"
+      ? supabase.auth.signInWithPassword(credentials)
+      : supabase.auth.signUp(credentials))
+      .catch((error: unknown) => ({
+        error: isFetchFailure(error)
+          ? new Error("Authentication service is unavailable. Please try again in a moment.")
+          : error instanceof Error
+            ? error
+            : new Error("Authentication request failed."),
+      }))
+      .finally(() => {
+        console.error = originalConsoleError;
+      });
 
     if (error) {
-      setErrorMessage(error.message);
+      setSupabaseOffline(true);
+      setErrorMessage(
+        error.message.includes("Failed to fetch")
+          ? "Authentication service is unavailable. Please try again in a moment."
+          : error.message,
+      );
       setActiveAction(null);
       return;
     }
 
+    setSupabaseOffline(false);
     router.replace("/");
     router.refresh();
   }
@@ -48,11 +78,11 @@ export default function LoginPage() {
 
   return (
     <div className="animate-fadeIn mx-auto flex min-h-[70vh] w-full max-w-md items-center justify-center">
-      <div className="system-panel system-card-interactive relative w-full rounded-[24px] p-6 sm:p-8">
+      <div className="system-panel system-card-shell system-card-interactive relative w-full p-6 sm:p-8">
         <div className="relative space-y-2">
           <p className="system-label">Authentication</p>
-          <h1 className="text-3xl font-semibold tracking-tight text-white">Login</h1>
-          <p className="text-sm leading-6 text-white/50">
+          <h1 className="system-page-heading text-3xl">Login</h1>
+          <p className="system-page-copy text-sm leading-6">
             Sign in to access your planner, or create an account with email and password.
           </p>
         </div>
@@ -83,7 +113,7 @@ export default function LoginPage() {
           </label>
 
           {errorMessage ? (
-            <p className="rounded-xl border border-rose-500/18 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">
+            <p className="semantic-danger rounded-xl px-3 py-2 text-sm">
               {errorMessage}
             </p>
           ) : null}
@@ -92,7 +122,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="system-button-primary flex-1 px-4 py-2.5 text-sm font-semibold disabled:border-white/30 disabled:bg-white/30 disabled:text-black/50"
+              className="system-button-primary flex-1 px-4 py-2.5 text-sm font-semibold disabled:border-white/30 disabled:bg-white/30 disabled:text-white/50"
             >
               {activeAction === "sign-in" ? "Signing In..." : "Sign In"}
             </button>

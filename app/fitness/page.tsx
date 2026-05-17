@@ -15,6 +15,7 @@ import {
   type LiftType,
 } from "@/lib/fitness/lifts";
 import {
+  createDefaultFitnessState,
   createEmptyFitnessDayLog,
   getDateKeysInRange,
   getFitnessWindowSummary,
@@ -35,6 +36,12 @@ const calendarWeekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 type ActiveDialog = "calories" | "protein" | "weight" | "lift" | null;
 type ActiveTab = "today" | "progress";
 type QuickAction = "calories" | "protein" | "weight";
+type GoalDraft = {
+  caloriesGoal: string;
+  proteinGoal: string;
+  weeklyWorkoutGoal: string;
+};
+type GoalDraftErrors = Partial<Record<keyof GoalDraft, string>>;
 type LiftDraft = {
   lift: LiftType;
   weight: string;
@@ -42,24 +49,36 @@ type LiftDraft = {
 };
 
 const summarySurfaceClassName =
-  "system-subtle-panel rounded-[18px] px-4 py-4 shadow-[0_12px_30px_rgba(0,0,0,0.42)]";
+  "system-stat-tile rounded-[12px] px-2 py-2 sm:rounded-[18px] sm:px-4 sm:py-4";
 const actionButtonClassName =
-  "system-button-secondary rounded-[18px] px-4 py-3 text-left text-sm font-semibold";
+  "system-button-secondary system-action-tile min-h-9 rounded-[12px] px-2.5 py-1.5 text-left text-[0.86rem] font-semibold sm:min-h-12 sm:rounded-[18px] sm:px-4 sm:py-3 sm:text-sm";
 const primaryActionButtonClassName =
-  "system-button-primary rounded-[18px] px-4 py-3 text-left text-sm font-semibold";
+  "system-button-primary min-h-9 rounded-[12px] px-2.5 py-1.5 text-left text-[0.86rem] font-semibold sm:min-h-12 sm:rounded-[18px] sm:px-4 sm:py-3 sm:text-sm";
 const compactPrimaryButtonClassName =
-  "system-button-primary rounded-xl px-4 py-2.5 text-sm font-semibold";
+  "system-button-primary rounded-xl px-3 py-2 text-sm font-semibold sm:px-4 sm:py-2.5";
 const inactiveIndicatorClassName = "border border-white/[0.07] bg-white/[0.02]";
 const liftMetaBadgeClassName =
   "system-pill px-2.5 py-1 text-[11px] font-semibold text-white/58";
 const liftPrBadgeClassName =
-  "inline-flex items-center rounded-full border border-emerald-200/15 bg-emerald-300/[0.08] px-2.5 py-1 text-[11px] font-semibold tracking-[0.08em] text-emerald-50/85";
+  "semantic-success inline-flex items-center px-2.5 py-1 text-[11px] font-semibold tracking-[0.08em]";
 
 function createDefaultLiftDraft(): LiftDraft {
   return {
     lift: "bench",
     weight: "",
     reps: "",
+  };
+}
+
+function createGoalDraft(goals: {
+  caloriesGoal: number;
+  proteinGoal: number;
+  weeklyWorkoutGoal: number;
+}): GoalDraft {
+  return {
+    caloriesGoal: String(goals.caloriesGoal),
+    proteinGoal: String(goals.proteinGoal),
+    weeklyWorkoutGoal: String(goals.weeklyWorkoutGoal),
   };
 }
 
@@ -200,6 +219,9 @@ function ProgressModule({
 }) {
   const clampedProgress = clampProgress(progress * 100);
   const remaining = Math.max(0, goal - value);
+  const fillClassName = `system-progress-fill ${
+    clampedProgress >= 100 ? "system-progress-fill-success" : ""
+  } ${clampedProgress === 0 ? "system-progress-fill-empty" : ""}`;
 
   return (
     <div className={summarySurfaceClassName}>
@@ -218,9 +240,9 @@ function ProgressModule({
         </span>
       </div>
 
-      <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-white/[0.06]">
+      <div className="system-progress-track mt-4 h-2.5">
         <div
-          className="h-full rounded-full bg-white/88"
+          className={fillClassName}
           style={{ width: `${clampedProgress}%` }}
         />
       </div>
@@ -252,8 +274,8 @@ function QuickActionButton({
 }) {
   return (
     <button type="button" className={actionButtonClassName} onClick={onClick}>
-      <span className="block">{label}</span>
-      <span className="mt-1 block text-xs font-medium text-white/45">{detail}</span>
+      <span className="relative block text-white">{label}</span>
+      <span className="relative mt-1 block text-xs font-medium text-white/58">{detail}</span>
     </button>
   );
 }
@@ -276,7 +298,7 @@ function TabButton({
       type="button"
       role="tab"
       aria-selected={isActive}
-      className="system-segmented-tab px-4 py-2 text-sm font-semibold"
+      className="system-segmented-tab min-h-8 px-3 py-1 text-sm font-semibold sm:min-h-10 sm:px-4 sm:py-2"
       onClick={() => onClick(tab)}
     >
       {label}
@@ -299,6 +321,165 @@ function ProgressStatCard({
       <p className="mt-3 text-2xl font-semibold tracking-tight text-white">{value}</p>
       <p className="mt-2 text-sm text-white/45">{helper}</p>
     </div>
+  );
+}
+
+function LatestWeightStrip({
+  hasHydrated,
+  latestWeight,
+  helper,
+  onEditGoals,
+  goalsSaved,
+}: {
+  hasHydrated: boolean;
+  latestWeight: number | null;
+  helper: string | null;
+  onEditGoals: () => void;
+  goalsSaved: boolean;
+}) {
+  return (
+    <div className="system-panel system-card-shell min-w-0 overflow-hidden rounded-[14px] p-2.5 sm:p-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+        <div className="min-w-0">
+          <p className="system-label text-white/45">Latest weight</p>
+          <p className="mt-1 truncate text-lg font-semibold tracking-tight text-white sm:text-2xl">
+            {hasHydrated ? formatWeight(latestWeight) : "--"}
+          </p>
+        </div>
+        <div className="flex min-w-0 flex-col items-start gap-2 text-left sm:items-end sm:text-right">
+          <p className="line-clamp-2 max-w-full text-xs leading-5 text-white/52 sm:max-w-[12rem]">
+            {hasHydrated ? (helper ?? "Trend ready") : "Loading trend"}
+          </p>
+          <button
+            type="button"
+            onClick={onEditGoals}
+            className="system-button-secondary inline-flex min-h-8 items-center justify-center rounded-[10px] px-2.5 py-1 text-xs font-semibold text-white/82"
+          >
+            {goalsSaved ? "Goals saved" : "Edit goals"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DailySnapshotCard({
+  calories,
+  caloriesGoal,
+  caloriesProgress,
+  protein,
+  proteinGoal,
+  proteinProgress,
+  workoutCompleted,
+  weeklyWorkoutCount,
+  weeklyWorkoutGoal,
+  hasHydrated,
+  className = "",
+}: {
+  calories: number;
+  caloriesGoal: number;
+  caloriesProgress: number;
+  protein: number;
+  proteinGoal: number;
+  proteinProgress: number;
+  workoutCompleted: boolean;
+  weeklyWorkoutCount: number;
+  weeklyWorkoutGoal: number;
+  hasHydrated: boolean;
+  className?: string;
+}) {
+  const snapshotSummary = hasHydrated
+    ? `${formatNumber(calories)} / ${formatNumber(caloriesGoal)} kcal · ${formatNumber(protein)} / ${formatNumber(proteinGoal)}g · ${
+        workoutCompleted ? "Workout done" : "Workout pending"
+      }`
+    : "Loading snapshot";
+
+  const snapshotContent = (
+    <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+      <ProgressModule
+        label="Calories"
+        value={calories}
+        goal={caloriesGoal}
+        progress={caloriesProgress}
+      />
+
+      <ProgressModule
+        label="Protein"
+        value={protein}
+        goal={proteinGoal}
+        unit="g"
+        progress={proteinProgress}
+      />
+
+      <div className={summarySurfaceClassName}>
+        <span className="system-label text-white/45">Workout today</span>
+        <p className="mt-2 text-xl font-semibold tracking-tight text-white sm:text-2xl">
+          {hasHydrated ? (workoutCompleted ? "Done" : "Pending") : "--"}
+        </p>
+        <p className="mt-1 text-xs text-white/50 sm:text-sm">
+          {workoutCompleted ? "Training logged today" : "Training still open"}
+        </p>
+        <p className="mt-2 text-xs text-white/35">
+          {hasHydrated ? `${weeklyWorkoutCount}/${weeklyWorkoutGoal} workouts this week` : "Loading week"}
+        </p>
+      </div>
+
+      <div className={summarySurfaceClassName}>
+        <span className="system-label text-white/45">Saved goals</span>
+        <p className="mt-2 text-xl font-semibold tracking-tight text-white sm:text-2xl">
+          {formatNumber(caloriesGoal)} / {formatNumber(proteinGoal)}g / {weeklyWorkoutGoal}x
+        </p>
+        <p className="mt-1 text-xs text-white/50 sm:text-sm">
+          Daily nutrition and weekly training targets
+        </p>
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      <details
+        className={`system-panel system-card-shell group min-w-0 overflow-hidden rounded-[14px] p-2.5 sm:hidden ${className}`}
+      >
+        <summary className="flex cursor-pointer list-none items-center rounded-[10px] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-white/30 [&::-webkit-details-marker]:hidden">
+          <div className="min-w-0 flex-1">
+            <p className="system-label text-white/45">Daily Snapshot</p>
+            <h3 className="mt-0.5 flex min-w-0 items-center gap-2 text-[0.92rem] font-bold tracking-normal text-white">
+              <span className="min-w-0 truncate">Goals and trends</span>
+              <span
+                aria-hidden="true"
+                className="system-pill inline-flex h-6 w-6 shrink-0 items-center justify-center p-0 text-white/72 transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
+              >
+                <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none">
+                  <path
+                    d="M5.5 8L10 12.5L14.5 8"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="1.8"
+                  />
+                </svg>
+              </span>
+            </h3>
+            <p className="mt-1 truncate text-[0.72rem] leading-4 text-white/48">
+              {snapshotSummary}
+            </p>
+          </div>
+        </summary>
+        <div className="pt-2 opacity-100 transition-[opacity,transform] duration-200 group-open:translate-y-0 motion-reduce:transition-none">
+          {snapshotContent}
+        </div>
+      </details>
+
+      <Card
+        title="Goals and trends"
+        subtitle="Daily snapshot"
+        variant="dark"
+        className={`hidden sm:block ${className}`}
+      >
+        {snapshotContent}
+      </Card>
+    </>
   );
 }
 
@@ -347,11 +528,11 @@ function WeightTrendChart({
         <span>{formatWeight(latestEntry.weight)}</span>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-white/[0.05] bg-black/45 px-2 py-3">
+      <div className="system-inset-panel overflow-hidden rounded-2xl px-2 py-3">
         <svg viewBox={`0 0 ${width} ${height}`} className="h-40 w-full" aria-label="Weight trend chart" role="img">
           <defs>
             <linearGradient id="fitness-weight-fill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="rgba(255,255,255,0.18)" />
+              <stop offset="0%" stopColor="rgba(255,255,255,0.12)" />
               <stop offset="100%" stopColor="rgba(255,255,255,0)" />
             </linearGradient>
           </defs>
@@ -380,7 +561,7 @@ function WeightTrendChart({
           <polyline
             points={linePath}
             fill="none"
-            stroke="rgba(255,255,255,0.72)"
+            stroke="rgba(226,228,234,0.72)"
             strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -392,7 +573,7 @@ function WeightTrendChart({
               cx={point.x}
               cy={point.y}
               r="2.5"
-              fill="rgba(255,255,255,0.9)"
+              fill="rgba(245,246,248,0.9)"
             />
           ))}
         </svg>
@@ -492,6 +673,140 @@ function NumberEntryDialog({
             </button>
             <button type="submit" className={primaryActionButtonClassName}>
               {submitLabel}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function GoalEditorDialog({
+  open,
+  draft,
+  errors,
+  onDraftChange,
+  onClose,
+  onSubmit,
+}: {
+  open: boolean;
+  draft: GoalDraft;
+  errors: GoalDraftErrors;
+  onDraftChange: (draft: GoalDraft) => void;
+  onClose: () => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  if (!open) {
+    return null;
+  }
+
+  const fields: Array<{
+    key: keyof GoalDraft;
+    label: string;
+    helper: string;
+    inputMode: "numeric";
+    min: number;
+    max?: number;
+    step: string;
+  }> = [
+    {
+      key: "caloriesGoal",
+      label: "Daily calories",
+      helper: "Positive kcal target",
+      inputMode: "numeric",
+      min: 1,
+      step: "1",
+    },
+    {
+      key: "proteinGoal",
+      label: "Daily protein grams",
+      helper: "Positive grams target",
+      inputMode: "numeric",
+      min: 1,
+      step: "1",
+    },
+    {
+      key: "weeklyWorkoutGoal",
+      label: "Weekly workouts",
+      helper: "Between 1 and 14",
+      inputMode: "numeric",
+      min: 1,
+      max: 14,
+      step: "1",
+    },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/78 p-3 sm:items-center sm:p-4">
+      <button
+        type="button"
+        aria-label="Close goal editor"
+        className="absolute inset-0 cursor-default"
+        onClick={onClose}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="fitness-goals-dialog-title"
+        className="system-panel relative w-full max-w-md rounded-[20px] p-3 shadow-[0_28px_76px_rgba(0,0,0,0.8)] sm:rounded-[24px] sm:p-4"
+      >
+        <div className="mb-3 flex items-start justify-between gap-3 sm:mb-4">
+          <div>
+            <p className="system-label text-white/45">Fitness settings</p>
+            <h3 id="fitness-goals-dialog-title" className="mt-1 text-base font-semibold tracking-tight text-white">
+              Edit goals
+            </h3>
+            <p className="mt-1 text-sm text-white/50">
+              These targets update Fitness and Home progress immediately.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="system-button-subtle px-2.5 py-1.5 text-sm text-white/65"
+          >
+            X
+          </button>
+        </div>
+
+        <form className="space-y-3" onSubmit={onSubmit}>
+          <div className="grid gap-2.5 sm:grid-cols-2">
+            {fields.map((field) => (
+              <label
+                key={field.key}
+                className={field.key === "weeklyWorkoutGoal" ? "block sm:col-span-2" : "block"}
+              >
+                <span className="system-label mb-1.5 block text-white/45">{field.label}</span>
+                <input
+                  autoFocus={field.key === "caloriesGoal"}
+                  inputMode={field.inputMode}
+                  min={field.min}
+                  max={field.max}
+                  step={field.step}
+                  type="number"
+                  value={draft[field.key]}
+                  onChange={(event) => onDraftChange({ ...draft, [field.key]: event.target.value })}
+                  className={`system-input px-3 py-2.5 text-base placeholder:text-white/25 ${
+                    errors[field.key] ? "border-[color-mix(in_srgb,var(--accent-danger)_45%,rgba(255,255,255,0.08))]" : ""
+                  }`}
+                />
+                <span className="mt-1 block text-xs text-white/42">
+                  {errors[field.key] ?? field.helper}
+                </span>
+              </label>
+            ))}
+          </div>
+
+          <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end sm:gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="system-button-secondary min-h-10 px-4 py-2.5 text-sm font-semibold"
+            >
+              Cancel
+            </button>
+            <button type="submit" className="system-button-primary min-h-10 px-4 py-2.5 text-sm font-semibold">
+              Save goals
             </button>
           </div>
         </form>
@@ -635,6 +950,12 @@ export default function FitnessPage() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("today");
   const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null);
   const [draftValue, setDraftValue] = useState("");
+  const [isGoalEditorOpen, setIsGoalEditorOpen] = useState(false);
+  const [goalDraft, setGoalDraft] = useState<GoalDraft>(() =>
+    createGoalDraft(createDefaultFitnessState().goals),
+  );
+  const [goalDraftErrors, setGoalDraftErrors] = useState<GoalDraftErrors>({});
+  const [goalsSaved, setGoalsSaved] = useState(false);
   const [liftDraft, setLiftDraft] = useState<LiftDraft>(createDefaultLiftDraft);
   const [showFullHistory, setShowFullHistory] = useState(false);
 
@@ -688,7 +1009,7 @@ export default function FitnessPage() {
     return liftSummaries.find(({ lift }) => lift === latestStrengthEntry.lift) ?? null;
   }, [liftSummaries, latestStrengthEntry]);
   const weightTrendEntries = useMemo(() => listWeightLogs(fitnessState).slice(-20), [fitnessState]);
-  const visibleRecentLogs = showFullHistory ? recentLogs : recentLogs.slice(0, 3);
+  const visibleRecentLogs = showFullHistory ? recentLogs : recentLogs.slice(0, 2);
   const hasEnoughWeightLogsForTrend = useMemo(
     () => recentLogs.filter(({ log }) => log.weight !== null).length >= 2,
     [recentLogs],
@@ -699,9 +1020,29 @@ export default function FitnessPage() {
   const caloriesProgress = todayLog.calories / Math.max(fitnessState.goals.caloriesGoal, 1);
   const proteinProgress = todayLog.protein / Math.max(fitnessState.goals.proteinGoal, 1);
 
+  useEffect(() => {
+    if (!goalsSaved) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => setGoalsSaved(false), 1800);
+    return () => window.clearTimeout(timeoutId);
+  }, [goalsSaved]);
+
   const openDialog = (dialog: QuickAction) => {
     setDraftValue("");
     setActiveDialog(dialog);
+  };
+
+  const openGoalEditor = () => {
+    setGoalDraft(createGoalDraft(fitnessState.goals));
+    setGoalDraftErrors({});
+    setIsGoalEditorOpen(true);
+  };
+
+  const closeGoalEditor = () => {
+    setIsGoalEditorOpen(false);
+    setGoalDraftErrors({});
   };
 
   const openLiftDialog = () => {
@@ -766,6 +1107,52 @@ export default function FitnessPage() {
     });
 
     closeDialog();
+  };
+
+  const handleGoalSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const parsedCaloriesGoal = Number(goalDraft.caloriesGoal);
+    const parsedProteinGoal = Number(goalDraft.proteinGoal);
+    const parsedWeeklyWorkoutGoal = Number(goalDraft.weeklyWorkoutGoal);
+    const nextErrors: GoalDraftErrors = {};
+
+    if (!Number.isFinite(parsedCaloriesGoal) || parsedCaloriesGoal <= 0) {
+      nextErrors.caloriesGoal = "Enter a positive calorie goal.";
+    }
+
+    if (!Number.isFinite(parsedProteinGoal) || parsedProteinGoal <= 0) {
+      nextErrors.proteinGoal = "Enter a positive protein goal.";
+    }
+
+    if (
+      !Number.isFinite(parsedWeeklyWorkoutGoal) ||
+      parsedWeeklyWorkoutGoal < 1 ||
+      parsedWeeklyWorkoutGoal > 14
+    ) {
+      nextErrors.weeklyWorkoutGoal = "Choose 1 to 14 workouts.";
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setGoalDraftErrors(nextErrors);
+      return;
+    }
+
+    const nextGoals = {
+      caloriesGoal: Math.round(parsedCaloriesGoal),
+      proteinGoal: Math.round(parsedProteinGoal),
+      weeklyWorkoutGoal: Math.round(parsedWeeklyWorkoutGoal),
+    };
+
+    updateFitnessState((currentState) => ({
+      ...currentState,
+      goals: nextGoals,
+    }));
+
+    setGoalDraft(createGoalDraft(nextGoals));
+    setGoalDraftErrors({});
+    setIsGoalEditorOpen(false);
+    setGoalsSaved(true);
   };
 
   const handleLiftSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -854,18 +1241,18 @@ export default function FitnessPage() {
 
   return (
     <>
-      <div className="animate-fadeIn space-y-5 sm:space-y-6">
-        <section className="space-y-1.5">
-          <h2 className="text-[1.75rem] font-semibold tracking-tight text-white sm:text-2xl">
+      <div className="animate-fadeIn space-y-2.5 sm:space-y-6">
+        <section className="space-y-1">
+          <h2 className="system-page-heading text-[1.3rem] sm:text-2xl">
             Fitness
           </h2>
-          <p className="max-w-2xl text-sm leading-6 text-white/50">
-            Fast daily tracking for calories, protein, training, and your latest weight.
+          <p className="system-page-copy max-w-[calc(100vw-2rem)] truncate text-[0.82rem] leading-5 [overflow-wrap:anywhere] sm:max-w-2xl sm:whitespace-normal sm:text-sm sm:leading-6">
+            Quick logging for today, with deeper trends tucked behind Progress.
           </p>
           <div
             role="tablist"
             aria-label="Fitness views"
-            className="system-subtle-panel mt-4 inline-flex rounded-[18px] p-1"
+            className="system-tab-rail mt-2 inline-flex rounded-[14px] p-1 sm:mt-4 sm:rounded-[18px]"
           >
             <TabButton
               label="Today"
@@ -884,107 +1271,9 @@ export default function FitnessPage() {
 
         {activeTab === "today" ? (
           <>
-            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <Card title="Calories today" subtitle={`Goal ${formatNumber(fitnessState.goals.caloriesGoal)} kcal`} variant="dark">
-                <div className={summarySurfaceClassName}>
-                  <p className="text-3xl font-semibold tracking-tight text-white">
-                    {hasHydrated ? formatNumber(todayLog.calories) : "--"}
-                  </p>
-                  <p className="mt-2 text-sm text-white/50">
-                    {hasHydrated
-                      ? `${Math.round(caloriesProgress * 100)}% of goal`
-                      : "Loading today’s totals"}
-                  </p>
-                </div>
-              </Card>
-
-              <Card title="Protein today" subtitle={`Goal ${formatNumber(fitnessState.goals.proteinGoal)} g`} variant="dark">
-                <div className={summarySurfaceClassName}>
-                  <p className="text-3xl font-semibold tracking-tight text-white">
-                    {hasHydrated ? `${formatNumber(todayLog.protein)}g` : "--"}
-                  </p>
-                  <p className="mt-2 text-sm text-white/50">
-                    {hasHydrated
-                      ? `${Math.round(proteinProgress * 100)}% of goal`
-                      : "Loading today’s totals"}
-                  </p>
-                </div>
-              </Card>
-
-              <Card title="Workout today" subtitle="Status" variant="dark">
-                <div className={summarySurfaceClassName}>
-                  <p className="text-3xl font-semibold tracking-tight text-white">
-                    {hasHydrated ? (todayLog.workoutCompleted ? "Done" : "Pending") : "--"}
-                  </p>
-                  <p className="mt-2 text-sm text-white/50">
-                    {hasHydrated
-                      ? todayLog.workoutCompleted
-                        ? "Marked complete for today"
-                        : "Still open today"
-                      : "Loading workout status"}
-                  </p>
-                </div>
-              </Card>
-
-              <Card title="Latest weight" subtitle="Most recent log" variant="dark">
-                <div className={summarySurfaceClassName}>
-                  <p className="text-3xl font-semibold tracking-tight text-white">
-                    {hasHydrated ? formatWeight(latestWeight) : "--"}
-                  </p>
-                  <p className="mt-2 text-sm text-white/50">
-                    {hasHydrated ? weightTrendSummary : "Loading weight trend"}
-                  </p>
-                </div>
-              </Card>
-            </section>
-
-            <section className="grid gap-4 xl:grid-cols-[1.2fr,0.8fr]">
-              <Card
-                title="Snapshot"
-                subtitle="Progress against your saved daily targets"
-                variant="dark"
-              >
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <ProgressModule
-                    label="Calories"
-                    value={todayLog.calories}
-                    goal={fitnessState.goals.caloriesGoal}
-                    progress={caloriesProgress}
-                  />
-
-                  <ProgressModule
-                    label="Protein"
-                    value={todayLog.protein}
-                    goal={fitnessState.goals.proteinGoal}
-                    unit="g"
-                    progress={proteinProgress}
-                  />
-
-                  <div className={summarySurfaceClassName}>
-                    <span className="system-label text-white/45">Weekly Workouts</span>
-                    <p className="mt-3 text-3xl font-semibold tracking-tight text-white">
-                      {hasHydrated ? `${weeklyWorkoutCount}/7` : "--"}
-                    </p>
-                    <p className="mt-2 text-sm text-white/50">
-                      Completed over the last 7 days
-                    </p>
-                  </div>
-
-                  <div className={summarySurfaceClassName}>
-                    <span className="system-label text-white/45">Weight Trend</span>
-                    <p className="mt-3 text-3xl font-semibold tracking-tight text-white">
-                      {hasHydrated ? formatWeight(latestWeight) : "--"}
-                    </p>
-                    <p className="mt-2 text-sm text-white/50">{hasHydrated ? weightTrendSummary : "Loading trend"}</p>
-                    {hasHydrated && weightTrendHelperText ? (
-                      <p className="mt-1 text-xs text-white/35">{weightTrendHelperText}</p>
-                    ) : null}
-                  </div>
-                </div>
-              </Card>
-
-              <Card title="Quick actions" subtitle="Short inputs, no big forms" variant="dark">
-                <div className="grid gap-3 sm:grid-cols-2">
+            <section className="grid gap-2.5 md:grid-cols-[minmax(0,1.2fr)_minmax(16rem,0.8fr)] md:gap-4">
+              <Card title="Quick actions" subtitle="Log today first" variant="dark">
+                <div className="grid gap-1.5 sm:grid-cols-2 sm:gap-2">
                   {quickActions.map((action) => (
                     <QuickActionButton
                       key={action.type}
@@ -1001,54 +1290,67 @@ export default function FitnessPage() {
                     <span className="block">
                       {todayLog.workoutCompleted ? "Undo workout" : "Mark workout complete"}
                     </span>
-                    <span className={`mt-1 block text-xs font-medium ${todayLog.workoutCompleted ? "text-white/45" : "text-black/65"}`}>
+                    <span className={`mt-0.5 block text-[0.72rem] font-medium sm:mt-1 sm:text-xs ${todayLog.workoutCompleted ? "text-white/45" : "text-white/70"}`}>
                       {todayLog.workoutCompleted ? "Clear today's training status" : "Keep today's streak current"}
                     </span>
                   </button>
                 </div>
-
-                <div className={`${summarySurfaceClassName} mt-4`}>
-                  <p className="system-label text-white/45">Saved Goals</p>
-                  <p className="mt-2 text-sm text-white/70">
-                    {formatNumber(fitnessState.goals.caloriesGoal)} kcal and{" "}
-                    {formatNumber(fitnessState.goals.proteinGoal)}g protein per day.
-                  </p>
-                </div>
               </Card>
+
+              <LatestWeightStrip
+                hasHydrated={hasHydrated}
+                latestWeight={latestWeight}
+                helper={weightTrendHelperText ?? weightTrendSummary}
+                onEditGoals={openGoalEditor}
+                goalsSaved={goalsSaved}
+              />
             </section>
+
+            <DailySnapshotCard
+              calories={todayLog.calories}
+              caloriesGoal={fitnessState.goals.caloriesGoal}
+              caloriesProgress={caloriesProgress}
+              protein={todayLog.protein}
+              proteinGoal={fitnessState.goals.proteinGoal}
+              proteinProgress={proteinProgress}
+              workoutCompleted={todayLog.workoutCompleted}
+              weeklyWorkoutCount={weeklyWorkoutCount}
+              weeklyWorkoutGoal={fitnessState.goals.weeklyWorkoutGoal}
+              hasHydrated={hasHydrated}
+            />
 
             <section>
               <Card title="Last 7 days" subtitle="Compact history preview" variant="dark">
-                <div className="space-y-2">
+                <div className="space-y-1.5 sm:space-y-2">
                   {visibleRecentLogs.map(({ date, log }) => (
                     <div
                       key={date}
-                      className="system-subtle-panel flex flex-col gap-2 rounded-[18px] px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                      className="system-subtle-panel flex flex-col gap-1.5 rounded-[12px] px-2.5 py-2 sm:flex-row sm:items-center sm:justify-between sm:rounded-[18px] sm:px-4 sm:py-3"
                     >
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-white">
+                        <p className="text-[0.82rem] font-semibold text-white sm:text-sm">
                           {formatDayLabel(date, todayKey)}
                         </p>
-                        <p className="text-xs text-white/40">{formatShortDate(date)}</p>
+                        <p className="text-[0.68rem] text-white/40 sm:text-xs">{formatShortDate(date)}</p>
                       </div>
 
-                      <div className="flex flex-wrap gap-1.5 text-[11px] text-white/70">
-                        <span className="system-pill px-2.5 py-1">
+                      <div className="flex flex-wrap gap-1 text-[10px] text-white/70 sm:gap-1.5 sm:text-[11px]">
+                        <span className="system-pill px-2 py-0.5 sm:px-2.5 sm:py-1">
                           {formatNumber(log.calories)} kcal
                         </span>
-                        <span className="system-pill px-2.5 py-1">
+                        <span className="system-pill px-2 py-0.5 sm:px-2.5 sm:py-1">
                           {formatNumber(log.protein)}g protein
                         </span>
                         <span
-                          className={`rounded-full px-2.5 py-1 ${
+                          className={`rounded-full px-2 py-0.5 sm:px-2.5 sm:py-1 ${
                             log.workoutCompleted
-                              ? "border border-emerald-500/18 bg-emerald-500/10 text-emerald-100"
-                              : "border border-white/[0.07] bg-white/[0.03] text-white/60"
+                              ? "semantic-success"
+                              : "semantic-neutral"
                           }`}
                         >
                           {log.workoutCompleted ? "Workout done" : "No workout"}
                         </span>
-                        <span className="system-pill px-2.5 py-1">
+                        <span className="system-pill px-2 py-0.5 sm:px-2.5 sm:py-1">
                           {log.weight === null ? "No weight" : `${log.weight} lb`}
                         </span>
                       </div>
@@ -1056,7 +1358,7 @@ export default function FitnessPage() {
                   ))}
                 </div>
 
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center justify-between gap-2 sm:gap-3">
                   <p className="text-xs text-white/40">
                     {latestLogs.length > 0
                       ? `Tracking ${latestLogs.length} saved day${latestLogs.length === 1 ? "" : "s"} in local storage.`
@@ -1065,7 +1367,7 @@ export default function FitnessPage() {
 
                   <button
                     type="button"
-                    className="system-pill px-3 py-1.5 text-xs font-semibold text-white/72"
+                    className="system-pill shrink-0 px-2.5 py-1 text-[11px] font-semibold text-white/72 sm:px-3 sm:py-1.5 sm:text-xs"
                     onClick={() => setShowFullHistory((current) => !current)}
                   >
                     {showFullHistory ? "Show less" : "View all 7 days"}
@@ -1076,7 +1378,7 @@ export default function FitnessPage() {
           </>
         ) : (
           <div className="space-y-4">
-            <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
               <ProgressStatCard
                 label="Workouts this month"
                 value={hasHydrated ? formatNumber(currentMonthSummary.workoutsCompleted) : "--"}
@@ -1108,15 +1410,15 @@ export default function FitnessPage() {
                 <div className="flex flex-wrap items-center justify-between gap-3 text-[11px] text-white/45">
                   <div className="flex flex-wrap items-center gap-3">
                     <span className="inline-flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-white/80" />
+                      <span className="h-2 w-2 rounded-full bg-[rgba(64,150,112,0.9)] shadow-[0_0_10px_rgba(64,150,112,0.14)]" />
                       Workout
                     </span>
                     <span className="inline-flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-white/35" />
+                      <span className="h-2 w-2 rounded-full bg-white/70 shadow-[0_0_10px_rgba(255,255,255,0.08)]" />
                       Protein goal
                     </span>
                     <span className="inline-flex items-center gap-1.5">
-                      <span className="h-3 w-3 rounded-md border border-white/[0.14] bg-white/[0.08]" />
+                      <span className="h-3 w-3 rounded-md border border-white/[0.16] bg-white/[0.055]" />
                       Calorie goal
                     </span>
                   </div>
@@ -1127,7 +1429,7 @@ export default function FitnessPage() {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-7 gap-2 text-[11px] text-white/32">
+                <div className="grid grid-cols-7 gap-1 text-[10px] text-white/32 sm:gap-2 sm:text-[11px]">
                   {calendarWeekdayLabels.map((weekday) => (
                     <div key={weekday} className="px-1 py-1 text-center">
                       {weekday}
@@ -1135,7 +1437,7 @@ export default function FitnessPage() {
                   ))}
                 </div>
 
-                <div className="grid grid-cols-7 gap-2">
+                <div className="grid grid-cols-7 gap-1 sm:gap-2">
                   {currentMonthCalendar.map(({ dateKey, dateNumber, inCurrentMonth, isToday, isFuture }) => {
                     const log = fitnessState.dailyLogs[dateKey];
                     const calorieGoalHit = Boolean(
@@ -1150,10 +1452,10 @@ export default function FitnessPage() {
                       <div
                         key={dateKey}
                         aria-label={`${dateKey}: ${workoutCompleted ? "workout complete, " : ""}${calorieGoalHit ? "calorie goal hit, " : ""}${proteinGoalHit ? "protein goal hit" : ""}`.trim()}
-                        className={`min-h-[74px] rounded-2xl border px-2.5 py-2 transition-colors ${
+                        className={`min-h-[48px] rounded-xl border px-1.5 py-1.5 transition-colors sm:min-h-[74px] sm:rounded-2xl sm:px-2.5 sm:py-2 ${
                           calorieGoalHit
-                            ? "border-white/[0.14] bg-white/[0.08]"
-                            : "border-white/[0.05] bg-black/35"
+                            ? "border-[color-mix(in_srgb,var(--accent-success)_24%,rgba(255,255,255,0.06))] bg-[rgba(64,150,112,0.045)] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+                            : "border-white/[0.06] bg-black/35"
                         } ${
                           inCurrentMonth ? "text-white/80" : "text-white/20"
                         } ${isToday ? "ring-1 ring-white/20" : ""} ${isFuture ? "opacity-45" : ""}`}
@@ -1162,18 +1464,18 @@ export default function FitnessPage() {
                           <span className={`text-sm font-semibold ${isToday ? "text-white" : ""}`}>
                             {dateNumber}
                           </span>
-                          {isToday ? <span className="mt-1 h-1.5 w-1.5 rounded-full bg-white/70" /> : null}
+                          {isToday ? <span className="mt-1 h-1.5 w-1.5 rounded-full bg-white/80 shadow-[0_0_10px_rgba(255,255,255,0.1)]" /> : null}
                         </div>
 
-                        <div className="mt-6 flex items-center gap-1.5">
+                        <div className="mt-3 flex items-center gap-1 sm:mt-6 sm:gap-1.5">
                           <span
                             className={`h-2 w-2 rounded-full ${
-                              workoutCompleted ? "bg-white/80" : inactiveIndicatorClassName
+                              workoutCompleted ? "bg-[rgba(64,150,112,0.9)] shadow-[0_0_10px_rgba(64,150,112,0.14)]" : inactiveIndicatorClassName
                             }`}
                           />
                           <span
                             className={`h-2 w-2 rounded-full ${
-                              proteinGoalHit ? "bg-white/35" : inactiveIndicatorClassName
+                              proteinGoalHit ? "bg-white/70 shadow-[0_0_10px_rgba(255,255,255,0.08)]" : inactiveIndicatorClassName
                             }`}
                           />
                         </div>
@@ -1206,7 +1508,34 @@ export default function FitnessPage() {
             </section>
 
             <section>
-              <Card title="Strength" subtitle="Compact lift tracking" variant="dark">
+              <details className="system-panel system-card-shell group relative overflow-hidden rounded-[16px] p-3 md:hidden">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 outline-none focus-visible:ring-2 focus-visible:ring-white/20 [&::-webkit-details-marker]:hidden">
+                  <div>
+                    <p className="system-label">Strength</p>
+                    <h3 className="mt-1 text-sm font-black text-white">
+                      {latestStrengthEntry
+                        ? `${LIFT_LABELS[latestStrengthEntry.lift]} · ${formatLiftPerformance(latestStrengthEntry)}`
+                        : "Lift tracking"}
+                    </h3>
+                  </div>
+                  <span className="system-pill px-2.5 py-1 text-[11px] font-semibold text-white/58 transition-transform group-open:rotate-180">▾</span>
+                </summary>
+                <div className="mt-3 space-y-3">
+                  <button
+                    type="button"
+                    className={`${compactPrimaryButtonClassName} min-h-10 w-full`}
+                    onClick={openLiftDialog}
+                  >
+                    Log lift
+                  </button>
+                  <p className="text-xs leading-5 text-white/45">
+                    {hasLiftEntries
+                      ? `${liftEntries.length} strength entr${liftEntries.length === 1 ? "y" : "ies"} saved locally.`
+                      : "Strength logs are stored locally on this device."}
+                  </p>
+                </div>
+              </details>
+              <Card title="Strength" subtitle="Compact lift tracking" variant="dark" className="hidden md:block">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className={`${summarySurfaceClassName} flex-1`}>
                     {hasHydrated ? (
@@ -1312,7 +1641,7 @@ export default function FitnessPage() {
                       }) => (
                       <div
                         key={lift}
-                        className="rounded-2xl border border-white/[0.05] bg-black/40 px-4 py-3.5 shadow-[0_18px_44px_rgba(0,0,0,0.42)]"
+                        className="system-stat-tile rounded-2xl px-4 py-3.5"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
@@ -1405,6 +1734,17 @@ export default function FitnessPage() {
         onDraftChange={setLiftDraft}
         onClose={closeDialog}
         onSubmit={handleLiftSubmit}
+      />
+      <GoalEditorDialog
+        open={isGoalEditorOpen}
+        draft={goalDraft}
+        errors={goalDraftErrors}
+        onDraftChange={(nextDraft) => {
+          setGoalDraft(nextDraft);
+          setGoalDraftErrors({});
+        }}
+        onClose={closeGoalEditor}
+        onSubmit={handleGoalSubmit}
       />
     </>
   );

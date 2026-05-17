@@ -31,11 +31,10 @@ export default function GenericCard({
       role={isClickable ? "button" : undefined}
       tabIndex={isClickable ? 0 : undefined}
       className={`
-        system-panel system-card-interactive
-        relative overflow-hidden
-        rounded-[24px]
+        system-panel system-card-object system-card-interactive
+        relative min-w-0 overflow-hidden
         transition-all duration-300 ease-out
-        p-3.5 sm:p-4
+        p-2.5 sm:p-4
         ${isClickable ? "cursor-pointer focus-visible:outline-none" : ""}
         ${className}
       `}

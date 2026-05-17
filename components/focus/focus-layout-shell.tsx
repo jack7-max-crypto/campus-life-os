@@ -43,11 +43,11 @@ export function FocusLayoutShell({
             {header}
           </div>
           <main
-            className={`relative flex-1 overflow-hidden px-4 pt-5 pb-28 sm:px-6 sm:pt-6 sm:pb-32 lg:px-8 lg:py-6 ${
+            className={`relative flex-1 overflow-hidden px-2.5 pt-2.5 pb-22 sm:px-6 sm:pt-6 sm:pb-32 lg:px-8 lg:py-6 ${
               hardFocusActive ? "pb-24 sm:pb-24" : ""
             }`}
           >
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-44 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.02),transparent_58%)]" />
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-52 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.026),transparent_62%)]" />
             <div className={`relative mx-auto w-full ${hardFocusActive ? "max-w-5xl" : "max-w-7xl"}`}>
               {children}
             </div>
@@ -82,11 +82,12 @@ function HardFocusOverlay() {
 
   return (
     <div className="pointer-events-none fixed inset-0 z-30">
-      <div className="absolute inset-0 bg-[#010102]/92" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.028),transparent_48%)]" />
+      <div className="absolute inset-0 bg-[#030304]/96" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(245,247,248,0.07),rgba(180,184,194,0.022)_24%,transparent_58%),radial-gradient(ellipse_at_center,transparent_0%,transparent_42%,rgba(0,0,0,0.9)_100%)]" />
+      <div className="absolute inset-0 system-grain" />
       <div className="flex min-h-full items-center justify-center px-4 py-8 sm:px-6">
-        <div className="pointer-events-auto relative w-full max-w-3xl rounded-[24px] border border-white/[0.07] bg-[#050506]/98 p-6 shadow-[0_28px_76px_rgba(0,0,0,0.8)] sm:p-8">
-          <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-white/14 to-transparent" />
+        <div className="system-panel system-card-shell pointer-events-auto relative w-full max-w-3xl border-white/[0.14] p-6 shadow-[0_32px_110px_rgba(0,0,0,0.9),0_0_24px_rgba(255,255,255,0.028)] sm:p-8">
+          <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-white/24 to-transparent" />
           <div className="relative space-y-8">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="space-y-3">
@@ -125,9 +126,9 @@ function HardFocusOverlay() {
             </div>
 
             <div
-              className={`rounded-[24px] border border-white/[0.06] bg-[#070708]/96 p-6 ${
+              className={`system-inset-panel rounded-[24px] p-6 ${
                 isComplete
-                  ? "animate-focusCompleteIn shadow-[0_0_32px_rgba(255,255,255,0.05)]"
+                  ? "animate-focusCompleteIn shadow-[0_0_18px_rgba(92,190,160,0.1)]"
                   : "shadow-[0_18px_48px_rgba(0,0,0,0.62)]"
               }`}
             >

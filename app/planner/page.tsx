@@ -1,19 +1,20 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import Card, { Card as InfoCard, MetricRow } from "@/components/ui/card";
 import { Assignment } from "@/lib/academics/types";
 import { formatDate } from "@/lib/academics/utils";
 import { useCourses } from "@/lib/academics/useCourses";
 import { recordTaskCompletion } from "@/lib/streak";
 import {
-  addTask,
+  addTask as addSupabaseTask,
   archiveTask,
   fetchTasks,
   updateTaskCompletion,
   type SupabaseTask,
 } from "@/lib/supabase/tasks";
+import { getSupabaseOffline, setSupabaseOffline } from "@/lib/supabase/offline";
 import {
   PlannerTaskCategory,
   PlannerTaskPriority,
@@ -21,6 +22,8 @@ import {
   usePlannerTasks,
 } from "@/lib/planner/usePlannerTasks";
 import { createClient } from "@/lib/supabase/client";
+
+const supabase = createClient();
 
 type PlannerBucket = "Overdue" | "Today" | "This Week" | "Later";
 type PlannerFilter = "All" | PlannerTaskCategory;
@@ -55,9 +58,13 @@ type PlannerCompletionFeedback = {
   id: number;
   message: string;
 };
+type PlannerAuthStatus = "loading" | "authenticated" | "unauthenticated" | "offline";
 
 const bucketOrder: PlannerBucket[] = ["Overdue", "Today", "This Week", "Later"];
-const plannerFilters: PlannerFilter[] = ["All", ...plannerTaskCategories];
+const plannerFilters: PlannerFilter[] = [
+  "All",
+  ...plannerTaskCategories.filter((category) => category !== "Money"),
+] as PlannerFilter[];
 const plannerPriorities: PlannerTaskPriority[] = ["P1", "P2", "P3"];
 const completionFadeDurationMs = 420;
 const completionFeedbackFadeDurationMs = 220;
@@ -68,15 +75,15 @@ const plannerPriorityRank: Record<PlannerTaskPriority, number> = {
   P3: 2,
 };
 const taskCategoryClasses: Record<PlannerTaskCategory | "Academics", string> = {
-  Academics: "border border-white/[0.08] bg-white/[0.06] text-white/75",
-  Fitness: "border border-white/[0.08] bg-white/[0.06] text-white/75",
-  Money: "border border-white/[0.08] bg-white/[0.06] text-white/75",
-  Personal: "border border-white/[0.08] bg-white/[0.06] text-white/75",
+  Academics: "semantic-primary",
+  Fitness: "semantic-success",
+  Money: "semantic-warning",
+  Personal: "semantic-neutral",
 };
 const priorityBadgeClasses: Record<PlannerTaskPriority, string> = {
-  P1: "border border-rose-500/18 bg-rose-500/10 text-rose-100",
-  P2: "border border-white/[0.08] bg-white/[0.06] text-white/75",
-  P3: "border border-white/[0.06] bg-white/[0.04] text-white/45",
+  P1: "semantic-danger",
+  P2: "semantic-warning",
+  P3: "semantic-neutral",
 };
 const priorityTitleClasses: Record<PlannerTaskPriority, string> = {
   P1: "text-white",
@@ -84,15 +91,15 @@ const priorityTitleClasses: Record<PlannerTaskPriority, string> = {
   P3: "text-white/80",
 };
 const sourceBadgeClassName =
-  "rounded-full border border-white/[0.08] bg-white/[0.06] px-2 py-1 text-[11px] font-medium uppercase tracking-[0.22em] text-white/55";
-const plannerInfoCardClassName = "rounded-[24px]";
+  "semantic-violet px-2 py-1 text-[11px] font-medium uppercase tracking-[0.22em]";
+const plannerInfoCardClassName = "rounded-[14px] sm:rounded-[24px]";
 const plannerFieldClassName =
-  "system-input mt-1 px-3 py-2 text-sm placeholder:text-white/30";
+  "system-input mt-1 px-2.5 py-1.5 text-sm placeholder:text-white/30 sm:px-3 sm:py-2";
 const plannerSecondaryButtonClassName =
-  "system-button-secondary w-full px-4 py-2.5 text-sm font-medium disabled:bg-[#050506] sm:w-auto";
+  "system-button-secondary w-full px-3 py-2 text-sm font-medium disabled:bg-[#050506] sm:w-auto sm:px-4 sm:py-2.5";
 const plannerPrimaryButtonClassName =
-  "system-button-primary w-full px-4 py-2.5 text-sm font-semibold sm:w-auto";
-const plannerSectionDividerClassName = "mt-14 border-t border-white/[0.05] pt-7";
+  "system-button-primary w-full px-3 py-2 text-sm font-semibold sm:w-auto sm:px-4 sm:py-2.5";
+const plannerSectionDividerClassName = "mt-5 border-t border-white/[0.045] pt-3 sm:mt-14 sm:border-white/[0.055] sm:pt-7";
 
 function createTaskDraft(): TaskDraft {
   return {
@@ -196,19 +203,20 @@ function getPlannerItemInsight(item: PlannerItem | null) {
 }
 
 export default function PlannerPage() {
-  const router = useRouter();
-  const [supabase] = useState(() => createClient());
   const { courses, setCourses, hasHydrated } = useCourses();
   const {
+    tasks: localPlannerTasks,
+    addTask: addLocalPlannerTask,
+    markTaskComplete: markLocalPlannerTaskComplete,
     updateTaskPriority,
     hasHydrated: hasPlannerTasksHydrated,
   } = usePlannerTasks();
-  const [authStatus, setAuthStatus] = useState<"loading" | "authenticated" | "unauthenticated">(
-    "loading",
-  );
+  const [authStatus, setAuthStatus] = useState<PlannerAuthStatus>("loading");
+  const [sessionUserId, setSessionUserId] = useState<string | null>(null);
   const [supabaseTasks, setSupabaseTasks] = useState<SupabaseTask[]>([]);
   const [hasLoadedSupabaseTasks, setHasLoadedSupabaseTasks] = useState(false);
   const [taskDraft, setTaskDraft] = useState<TaskDraft>(createTaskDraft);
+  const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<PlannerFilter>("All");
   const [assignmentPriorities, setAssignmentPriorities] = useState<
     Record<string, PlannerTaskPriority>
@@ -222,13 +230,41 @@ export default function PlannerPage() {
   const [completingItemKeys, setCompletingItemKeys] = useState<string[]>([]);
   const completingItemKeysRef = useRef<string[]>([]);
   const completionTimeoutIdsRef = useRef<Record<string, number>>({});
-  const isReady = hasHydrated && hasPlannerTasksHydrated && hasLoadedSupabaseTasks;
+  const loadedSupabaseTasksForUserRef = useRef<string | null>(null);
+  const isAuthenticated = authStatus === "authenticated";
+  const isOffline = authStatus === "offline" || getSupabaseOffline();
+  const isReady =
+    hasHydrated &&
+    hasPlannerTasksHydrated &&
+    (isOffline || authStatus !== "loading") &&
+    (!isAuthenticated || hasLoadedSupabaseTasks);
 
-  async function loadSupabaseTasks() {
-    const data = await fetchTasks();
-    setSupabaseTasks(data ?? []);
-    setHasLoadedSupabaseTasks(true);
-  }
+  const loadSupabaseTasks = useCallback(async (userId = sessionUserId) => {
+    if (!userId) {
+      setSupabaseTasks([]);
+      setHasLoadedSupabaseTasks(true);
+      return;
+    }
+
+    try {
+      const data = await fetchTasks(userId);
+      if (getSupabaseOffline()) {
+        setAuthStatus("offline");
+        setSessionUserId(null);
+        setSupabaseTasks([]);
+        return;
+      }
+
+      setSupabaseTasks(data ?? []);
+    } catch {
+      setSupabaseOffline(true);
+      setAuthStatus("offline");
+      setSessionUserId(null);
+      setSupabaseTasks([]);
+    } finally {
+      setHasLoadedSupabaseTasks(true);
+    }
+  }, [sessionUserId]);
 
   useEffect(() => {
     completingItemKeysRef.current = completingItemKeys;
@@ -267,61 +303,71 @@ export default function PlannerPage() {
 
   useEffect(() => {
     let isMounted = true;
-
-    async function validateSession() {
-      const {
-        data: { user },
-        error,
-      } = await supabase.auth.getUser();
-
-      if (!isMounted) {
-        return;
+    const fallbackTimeoutId = window.setTimeout(() => {
+      if (isMounted) {
+        setAuthStatus(getSupabaseOffline() ? "offline" : "unauthenticated");
+        setSessionUserId(null);
       }
+    }, 1500);
 
-      if (error || !user) {
-        setAuthStatus("unauthenticated");
-        router.replace("/login");
-        router.refresh();
-        return;
-      }
+    let subscription: { unsubscribe: () => void } | null = null;
 
-      setAuthStatus("authenticated");
+    try {
+      const authState = supabase.auth.onAuthStateChange(
+        (_event: AuthChangeEvent, session: Session | null) => {
+          if (!isMounted) {
+            return;
+          }
+
+          window.clearTimeout(fallbackTimeoutId);
+
+          if (!session?.user) {
+            setAuthStatus(getSupabaseOffline() ? "offline" : "unauthenticated");
+            setSessionUserId(null);
+            return;
+          }
+
+          setSupabaseOffline(false);
+          setSessionUserId(session.user.id);
+          setAuthStatus("authenticated");
+        },
+      );
+
+      subscription = authState.data.subscription;
+    } catch {
+      setSupabaseOffline(true);
+      setAuthStatus("offline");
+      setSessionUserId(null);
+      window.clearTimeout(fallbackTimeoutId);
     }
-
-    void validateSession();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session?.user) {
-        setAuthStatus("unauthenticated");
-        router.replace("/login");
-        router.refresh();
-        return;
-      }
-
-      setAuthStatus("authenticated");
-    });
 
     return () => {
       isMounted = false;
-      subscription.unsubscribe();
+      window.clearTimeout(fallbackTimeoutId);
+      subscription?.unsubscribe();
     };
-  }, [router, supabase]);
+  }, []);
 
   useEffect(() => {
-    if (authStatus !== "authenticated") {
+    if (authStatus !== "authenticated" || !sessionUserId) {
       return;
     }
 
+    if (loadedSupabaseTasksForUserRef.current === sessionUserId) {
+      return;
+    }
+
+    loadedSupabaseTasksForUserRef.current = sessionUserId;
+    setHasLoadedSupabaseTasks(false);
+
     const timeoutId = window.setTimeout(() => {
-      void loadSupabaseTasks();
+      void loadSupabaseTasks(sessionUserId);
     }, 0);
 
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [authStatus]);
+  }, [authStatus, loadSupabaseTasks, sessionUserId]);
 
   const activeSupabaseTasks = useMemo(
     () => supabaseTasks.filter((task) => !task.archived),
@@ -361,8 +407,8 @@ export default function PlannerPage() {
       )
       .filter((assignment) => assignment.status !== "completed");
 
-    const incompleteTasks: PlannerTaskItem[] = openSupabaseTasks
-      .map((task) => ({
+    const incompleteTasks: PlannerTaskItem[] = (isAuthenticated
+      ? openSupabaseTasks.map((task) => ({
         id: task.id,
         itemType: "task" as const,
         bucket: getPlannerBucket(task.due_date, today),
@@ -372,7 +418,20 @@ export default function PlannerPage() {
         priority: taskPriorities[task.id] ?? "P2",
         completed: task.completed,
         note: task.note ?? undefined,
-      }));
+      }))
+      : localPlannerTasks
+          .filter((task) => !task.completed)
+          .map((task) => ({
+            id: task.id,
+            itemType: "task" as const,
+            bucket: getPlannerBucket(task.dueDate, today),
+            dueDate: task.dueDate,
+            title: task.title,
+            displayCategory: task.category,
+            priority: taskPriorities[task.id] ?? task.priority,
+            completed: task.completed,
+            note: task.note,
+          })));
 
     const incompleteItems: PlannerItem[] = [...incompleteAssignments, ...incompleteTasks].sort(
       (a, b) => {
@@ -402,7 +461,7 @@ export default function PlannerPage() {
       grouped,
       incompleteItems,
     };
-  }, [assignmentPriorities, courses, openSupabaseTasks, taskPriorities]);
+  }, [assignmentPriorities, courses, isAuthenticated, localPlannerTasks, openSupabaseTasks, taskPriorities]);
 
   const filteredPlanner = useMemo(() => {
     const visibleItems =
@@ -494,11 +553,16 @@ export default function PlannerPage() {
       return;
     }
 
-    console.log("Completing Supabase planner task", item);
-    const updatedTask = await updateTaskCompletion(item.id, true);
+    if (!isAuthenticated) {
+      markLocalPlannerTaskComplete(item.id);
+      return;
+    }
+
+    const updatedTask = await updateTaskCompletion(item.id, true, sessionUserId);
     if (updatedTask?.completed) {
       recordTaskCompletion();
     }
+
     await loadSupabaseTasks();
   };
 
@@ -579,12 +643,27 @@ export default function PlannerPage() {
       return;
     }
 
-    const createdTask = await addTask({
-      title: normalizedTitle,
-      due_date: dueDate,
-      category,
-      note: normalizedNote || undefined,
-    });
+    if (!isAuthenticated) {
+      addLocalPlannerTask({
+        title: normalizedTitle,
+        dueDate,
+        category,
+        note: normalizedNote || undefined,
+      });
+      setTaskDraft(createTaskDraft());
+      setIsAddTaskOpen(false);
+      return;
+    }
+
+    const createdTask = await addSupabaseTask(
+      {
+        title: normalizedTitle,
+        due_date: dueDate,
+        category,
+        note: normalizedNote || undefined,
+      },
+      sessionUserId,
+    );
 
     if (!createdTask) {
       return;
@@ -592,36 +671,35 @@ export default function PlannerPage() {
 
     await loadSupabaseTasks();
     setTaskDraft(createTaskDraft());
+    setIsAddTaskOpen(false);
   };
 
-  if (authStatus !== "authenticated") {
+  if (authStatus === "loading") {
     return (
       <InfoCard
-        title={authStatus === "loading" ? "Checking access" : "Redirecting to login"}
+        title="Checking access"
         subtitle="Planner authentication"
         className={plannerInfoCardClassName}
         variant="dark"
       >
         <p className="text-sm text-white/50">
-          {authStatus === "loading"
-            ? "Verifying your session before loading planner data..."
-            : "You need to sign in to use the planner."}
+          Verifying your session before loading planner data...
         </p>
       </InfoCard>
     );
   }
 
   return (
-    <div className="animate-fadeIn space-y-4 pb-24 sm:space-y-5 md:space-y-6 md:pb-6 lg:space-y-7">
-      <section className="space-y-1.5">
-        <h2 className="text-3xl font-semibold tracking-tight text-white md:text-[2rem]">
+    <div className="animate-fadeIn space-y-2.5 pb-22 sm:space-y-5 md:space-y-6 md:pb-6 lg:space-y-7">
+      <section className="space-y-1">
+        <h2 className="system-page-heading text-[1.3rem] md:text-[2rem]">
           Planner
         </h2>
-        <p className="max-w-2xl text-sm leading-6 text-white/50">
+        <p className="system-page-copy max-w-2xl text-[0.82rem] leading-5 sm:text-sm sm:leading-6">
           One timeline for course assignments and your own custom tasks.
         </p>
-        <div className="mt-5 flex flex-wrap items-center gap-2">
-          <span className="system-label text-white/45">Filter</span>
+        <div className="system-tab-rail mt-2 -mx-0.5 flex max-w-full items-center gap-1 overflow-x-auto rounded-[14px] p-1 [scrollbar-width:none] sm:mx-0 sm:mt-5 sm:w-fit sm:flex-wrap sm:gap-2 sm:rounded-[20px] sm:p-1.5 [&::-webkit-scrollbar]:hidden">
+          <span className="system-label shrink-0 pl-1 text-white/45">Filter</span>
           {plannerFilters.map((filter) => {
             const isActive = filter === activeFilter;
             return (
@@ -629,10 +707,10 @@ export default function PlannerPage() {
                 key={filter}
                 type="button"
                 onClick={() => setActiveFilter(filter)}
-                className={`min-h-[44px] rounded-full border px-4 py-2 text-sm font-medium transition-all duration-200 active:scale-[0.98] ${
+                className={`system-segmented-tab min-h-8 shrink-0 rounded-full px-2.5 py-1 text-xs font-medium sm:min-h-[44px] sm:px-4 sm:py-2 sm:text-sm ${
                   isActive
                     ? "system-selected-control"
-                    : "border-white/[0.08] bg-[#09090a] text-white/58 hover:border-white/[0.14] hover:bg-white/[0.05] hover:text-white"
+                    : ""
                 }`}
               >
                 {filter}
@@ -640,12 +718,12 @@ export default function PlannerPage() {
             );
           })}
         </div>
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-1.5 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] sm:mt-3 sm:flex-wrap sm:gap-2 sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden">
           <button
             type="button"
             onClick={() => completePlannerItems(filteredPlanner.grouped.Overdue)}
             disabled={!isReady || filteredPlanner.grouped.Overdue.length === 0}
-            className={plannerSecondaryButtonClassName}
+            className={`${plannerSecondaryButtonClassName} min-h-8 shrink-0 px-2.5 py-1 text-xs sm:min-h-10 sm:px-4 sm:py-2.5 sm:text-sm`}
           >
             Complete all overdue
           </button>
@@ -653,7 +731,7 @@ export default function PlannerPage() {
             type="button"
             onClick={() => completePlannerItems(filteredPlanner.grouped.Today)}
             disabled={!isReady || filteredPlanner.grouped.Today.length === 0}
-            className={plannerSecondaryButtonClassName}
+            className={`${plannerSecondaryButtonClassName} min-h-8 shrink-0 px-2.5 py-1 text-xs sm:min-h-10 sm:px-4 sm:py-2.5 sm:text-sm`}
           >
             Complete all today
           </button>
@@ -661,7 +739,7 @@ export default function PlannerPage() {
             type="button"
             onClick={handleFocusModeToggle}
             disabled={!isReady || !mostImportantItem}
-            className={`${plannerSecondaryButtonClassName} ${
+            className={`${plannerSecondaryButtonClassName} min-h-8 shrink-0 px-2.5 py-1 text-xs sm:min-h-10 sm:px-4 sm:py-2.5 sm:text-sm ${
               isFocusMode ? "system-selected-control" : ""
             }`}
           >
@@ -672,7 +750,7 @@ export default function PlannerPage() {
           <div
             role="status"
             aria-live="polite"
-            className={`mt-4 rounded-xl border border-emerald-500/18 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-100 shadow-[0_18px_44px_rgba(0,0,0,0.32)] transition-all duration-200 ${
+            className={`system-subtle-panel system-card-positive mt-2.5 rounded-xl px-3 py-2 text-sm font-semibold text-white transition-all duration-200 sm:mt-4 sm:px-4 sm:py-3 ${
               isCompletionFeedbackVisible
                 ? "translate-y-0 opacity-100"
                 : "-translate-y-1 opacity-0"
@@ -682,31 +760,31 @@ export default function PlannerPage() {
           </div>
         ) : null}
         <div
-          className={`system-subtle-panel system-card-interactive rounded-[18px] px-4 py-4 sm:px-5 ${
+          className={`system-panel system-command-card system-card-interactive rounded-[14px] px-2.5 py-2.5 sm:rounded-[22px] sm:px-5 sm:py-4 ${
             isFocusMode ? "system-focus-active" : ""
           } ${
             focusedPlannerItem?.bucket === "Overdue" ? "system-card-priority" : ""
           }`}
         >
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex flex-col gap-2.5 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
               <p className="system-label text-white/45">{isFocusMode ? "Focus mode target" : plannerInsight.eyebrow}</p>
-              <p className="mt-2 text-base font-semibold text-white sm:text-lg">
+              <p className="mt-1 line-clamp-2 text-[0.9rem] font-semibold text-white sm:mt-2 sm:text-lg">
                 {focusedPlannerItem ? focusedPlannerItem.title : "No open items"}
               </p>
-              <p className="mt-1 text-sm text-white/60">
+              <p className="mt-0.5 text-xs text-white/60 sm:mt-1 sm:text-sm">
                 {focusedPlannerItem
                   ? getPlannerItemContext(focusedPlannerItem)
                   : "Use the planner to add the next concrete milestone."}
               </p>
-              <p className="mt-2 text-sm leading-6 text-white/50">{plannerInsight.description}</p>
+              <p className="mt-1 text-xs leading-4 text-white/50 sm:mt-2 sm:text-sm sm:leading-6">{plannerInsight.description}</p>
             </div>
             {focusedPlannerItem ? (
-              <div className="flex shrink-0 flex-wrap gap-2">
-                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${priorityBadgeClasses[focusedPlannerItem.priority]}`}>
+              <div className="flex shrink-0 flex-wrap gap-1.5 sm:gap-2">
+                <span className={`px-2.5 py-0.5 text-[11px] font-semibold sm:px-3 sm:py-1 sm:text-xs ${priorityBadgeClasses[focusedPlannerItem.priority]}`}>
                   {focusedPlannerItem.priority}
                 </span>
-                <span className="system-pill px-3 py-1 text-xs font-semibold text-white/70">
+                <span className="system-pill px-2.5 py-0.5 text-[11px] font-semibold text-white/70 sm:px-3 sm:py-1 sm:text-xs">
                   {focusedPlannerItem.bucket}
                 </span>
               </div>
@@ -721,8 +799,19 @@ export default function PlannerPage() {
         className={`${plannerInfoCardClassName} ${plannerSectionDividerClassName} ${plannerSecondarySectionClassName}`}
         variant="dark"
       >
-        <form className="space-y-3" onSubmit={handleAddTask}>
-          <div className="grid gap-3 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={() => setIsAddTaskOpen((current) => !current)}
+          className="system-button-secondary flex min-h-8 w-full items-center justify-center rounded-[11px] px-3 py-1 text-xs font-medium md:hidden"
+          aria-expanded={isAddTaskOpen}
+        >
+          {isAddTaskOpen ? "Close add task" : "Add a task"}
+        </button>
+        <form
+          className={`${isAddTaskOpen ? "block" : "hidden"} space-y-2 md:block md:space-y-3`}
+          onSubmit={handleAddTask}
+        >
+          <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
             <label className="system-label text-white/45">
               Title
               <input
@@ -771,7 +860,7 @@ export default function PlannerPage() {
             <label className="system-label text-white/45 sm:col-span-2">
               Note (optional)
               <textarea
-                rows={3}
+                rows={2}
                 value={taskDraft.note}
                 onChange={(event) =>
                   setTaskDraft((previous) => ({ ...previous, note: event.target.value }))
@@ -788,12 +877,12 @@ export default function PlannerPage() {
       </InfoCard>
 
       <section
-        className={`grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-5 xl:gap-5 ${plannerSectionDividerClassName} ${plannerSecondarySectionClassName}`}
+        className={`hidden grid-cols-2 gap-1.5 sm:grid sm:grid-cols-2 sm:gap-4 xl:grid-cols-5 ${plannerSectionDividerClassName} ${plannerSecondarySectionClassName}`}
       >
         <InfoCard
           title="Open items"
           subtitle="Assignments and tasks"
-          className={plannerInfoCardClassName}
+          className={`${plannerInfoCardClassName} min-w-0`}
           variant="dark"
         >
           <MetricRow
@@ -805,7 +894,7 @@ export default function PlannerPage() {
         <InfoCard
           title="Overdue"
           subtitle="Past due"
-          className={`${plannerInfoCardClassName} ${
+          className={`${plannerInfoCardClassName} min-w-0 ${
             filteredPlanner.grouped.Overdue.length > 0 ? "system-card-priority" : ""
           }`}
           variant="dark"
@@ -819,7 +908,7 @@ export default function PlannerPage() {
         <InfoCard
           title="Today"
           subtitle="Due today"
-          className={plannerInfoCardClassName}
+          className={`${plannerInfoCardClassName} min-w-0`}
           variant="dark"
         >
           <MetricRow
@@ -831,7 +920,7 @@ export default function PlannerPage() {
         <InfoCard
           title="This Week"
           subtitle="Due in the next 7 days"
-          className={plannerInfoCardClassName}
+          className={`${plannerInfoCardClassName} min-w-0`}
           variant="dark"
         >
           <MetricRow
@@ -843,7 +932,7 @@ export default function PlannerPage() {
         <InfoCard
           title="Later"
           subtitle="Beyond the next 7 days"
-          className={`${plannerInfoCardClassName} ${
+          className={`${plannerInfoCardClassName} min-w-0 col-span-2 sm:col-span-1 ${
             filteredPlanner.grouped.Later.length === filteredPlanner.visibleItems.length &&
             filteredPlanner.visibleItems.length > 0
               ? "system-card-positive"
@@ -893,10 +982,10 @@ export default function PlannerPage() {
           </p>
         </InfoCard>
       ) : (
-        <section className={`system-panel relative space-y-5 rounded-[24px] p-4 ${plannerSectionDividerClassName} sm:p-5 md:space-y-6 md:p-6`}>
+        <section className={`system-panel system-command-card relative space-y-3 rounded-[16px] p-2.5 ${plannerSectionDividerClassName} sm:space-y-5 sm:rounded-[24px] sm:p-5 md:space-y-6 md:p-6`}>
           <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/8 to-transparent" />
           <div
-            className={`system-subtle-panel system-card-interactive flex flex-wrap items-center gap-2 rounded-[18px] px-3 py-2 text-xs text-white/50 ${
+            className={`system-inset-panel system-card-interactive hidden flex-wrap items-center gap-2 rounded-[18px] px-3 py-2 text-xs text-white/58 sm:flex ${
               isFocusMode ? "system-focus-dim" : ""
             }`}
           >
@@ -907,23 +996,23 @@ export default function PlannerPage() {
           {bucketOrder.map((bucket, index) => {
             const items = filteredPlanner.grouped[bucket];
             return (
-              <div key={bucket} className="space-y-3">
+              <div key={bucket} className="space-y-1.5 sm:space-y-3">
                 <div
-                  className={`flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:justify-between ${
-                    index === 0 ? "" : "mt-6"
+                  className={`flex items-center justify-between gap-3 ${
+                    index === 0 ? "" : "mt-2 sm:mt-6"
                   }`}
                 >
-                  <h3 className="text-base font-semibold text-white sm:text-lg">{bucket}</h3>
-                  <span className="text-sm text-white/45">
+                  <h3 className="text-[0.92rem] font-semibold text-white sm:text-lg">{bucket}</h3>
+                  <span className="system-pill px-2 py-0.5 text-[11px] font-semibold text-white/58 sm:bg-transparent sm:px-0 sm:py-0 sm:text-sm sm:text-white/45 sm:shadow-none">
                     {items.length} open item{items.length === 1 ? "" : "s"}
                   </span>
                 </div>
                 {items.length === 0 ? (
-                  <p className="text-sm text-white/35">
+                  <p className="hidden text-sm text-white/35 sm:block">
                     Nothing here. Pull forward work from the next bucket if you want more margin.
                   </p>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-1.5 sm:space-y-3">
                     {items.map((item, itemIndex) => {
                       const itemKey = getPlannerItemKey(item);
                       const isOverdue = item.bucket === "Overdue";
@@ -950,7 +1039,7 @@ export default function PlannerPage() {
                               onClick={
                                 isFocusMode ? () => setFocusedItemKey(itemKey) : undefined
                               }
-                              className={`system-subtle-panel border border-white/[0.05] bg-black/40 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between ${
+                              className={`system-card-object flex flex-col items-start gap-2 p-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:p-3.5 ${
                                 isAtRisk ? "system-card-priority" : ""
                               } ${
                                 isFocusMode
@@ -963,9 +1052,9 @@ export default function PlannerPage() {
                               }`}
                             >
                               <div className="flex min-w-0 flex-1 flex-col">
-                                <div className="flex flex-wrap items-start gap-2">
+                                <div className="flex flex-wrap items-start gap-1.5 sm:gap-2">
                                   <span
-                                    className={`min-w-0 text-sm font-medium sm:text-base ${
+                                    className={`line-clamp-2 min-w-0 basis-full text-[0.84rem] font-semibold leading-4 sm:basis-auto sm:text-base sm:leading-normal ${
                                       isCompleting
                                         ? "line-through text-white/35"
                                         : priorityTitleClasses[item.priority]
@@ -974,37 +1063,37 @@ export default function PlannerPage() {
                                     {item.title}
                                   </span>
                                   <span
-                                    className={`rounded-full px-2 py-1 text-xs ${taskCategoryClasses[item.displayCategory]}`}
+                                    className={`px-1.5 py-0.5 text-[10px] sm:px-2 sm:py-1 sm:text-xs ${taskCategoryClasses[item.displayCategory]}`}
                                   >
                                     {item.displayCategory}
                                   </span>
-                                  <span className={sourceBadgeClassName}>
+                                  <span className={`${sourceBadgeClassName} hidden sm:inline-flex`}>
                                     {item.itemType === "assignment" ? "Course Assignment" : "My Task"}
                                   </span>
                                   <span
-                                    className={`rounded-full px-2 py-1 text-xs font-semibold ${priorityBadgeClasses[item.priority]}`}
+                                    className={`px-1.5 py-0.5 text-[10px] font-semibold sm:px-2 sm:py-1 sm:text-xs ${priorityBadgeClasses[item.priority]}`}
                                   >
                                     {item.priority}
                                   </span>
                                   {isOverdue ? (
-                                    <span className="rounded-full border border-rose-500/18 bg-rose-500/10 px-2 py-1 text-xs text-rose-100">
+                                    <span className="semantic-danger px-1.5 py-0.5 text-[10px] sm:px-2 sm:py-1 sm:text-xs">
                                       Overdue
                                     </span>
                                   ) : null}
                                   {isFocusedItem ? (
-                                    <span className="rounded-full border border-white/[0.14] bg-white/[0.08] px-2 py-1 text-xs text-white">
+                                    <span className="semantic-primary px-1.5 py-0.5 text-[10px] sm:px-2 sm:py-1 sm:text-xs">
                                       Active
                                     </span>
                                   ) : null}
                                 </div>
-                                <span className="mt-1 text-xs leading-5 text-white/50">
+                                <span className="mt-1 text-[0.72rem] leading-4 text-white/50 sm:text-xs sm:leading-5">
                                   {getPlannerItemContext(item)}
                                 </span>
                                 {item.itemType === "task" && item.note ? (
-                                  <span className="mt-1 text-xs leading-5 text-white/35">{item.note}</span>
+                                  <span className="mt-0.5 line-clamp-1 text-[0.72rem] leading-4 text-white/35 sm:mt-1 sm:text-xs sm:leading-5">{item.note}</span>
                                 ) : null}
                               </div>
-                              <div className="flex w-full shrink-0 flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center">
+                              <div className="grid w-full shrink-0 grid-cols-[minmax(0,1fr)_5.8rem] items-center gap-1.5 sm:flex sm:w-auto sm:flex-row sm:gap-2">
                                 <label className="sr-only" htmlFor={`priority-${item.itemType}-${item.id}`}>
                                   Priority
                                 </label>
@@ -1018,7 +1107,7 @@ export default function PlannerPage() {
                                       event.target.value as PlannerTaskPriority,
                                     )
                                   }
-                                  className="system-button-secondary w-full rounded-full px-3 py-2 text-sm sm:w-auto"
+                                  className="system-button-secondary min-h-8 w-full rounded-full px-2.5 py-1 text-xs sm:min-h-10 sm:w-auto sm:px-3 sm:py-2 sm:text-sm"
                                 >
                                   {plannerPriorities.map((priority) => (
                                     <option key={priority} value={priority}>
@@ -1035,9 +1124,10 @@ export default function PlannerPage() {
                                   }
                                   disabled={isCompleting}
                                   onClick={() => markPlannerItemComplete(item)}
-                                  className="system-button-primary flex min-h-[44px] w-full items-center justify-center rounded-full px-4 text-black disabled:border-white/[0.06] disabled:bg-white/20 disabled:text-white/40 sm:h-11 sm:w-11 sm:px-0"
+                                  className="system-button-primary flex min-h-8 w-full items-center justify-center rounded-full px-2 text-xs font-semibold disabled:border-white/[0.06] disabled:bg-white/20 disabled:text-white/40 sm:h-11 sm:w-11 sm:px-0"
                                 >
-                                  {isCompleting ? "…" : "✓"}
+                                  <span className="sm:hidden">{isCompleting ? "Completing..." : "Complete"}</span>
+                                  <span className="hidden sm:inline">{isCompleting ? "…" : "✓"}</span>
                                 </button>
                               </div>
                             </Card>
@@ -1052,6 +1142,30 @@ export default function PlannerPage() {
           })}
         </section>
       )}
+
+      <details className={`system-panel system-command-card group rounded-[14px] p-2.5 sm:hidden ${plannerSectionDividerClassName}`}>
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 outline-none focus-visible:ring-2 focus-visible:ring-white/20 [&::-webkit-details-marker]:hidden">
+          <div className="min-w-0">
+            <p className="system-label text-white/45">Planner metrics</p>
+            <p className="mt-0.5 text-sm font-semibold text-white">
+              {isReady ? `${filteredPlanner.visibleItems.length} open items` : "Loading"}
+            </p>
+          </div>
+          <span className="system-pill shrink-0 px-2.5 py-1 text-[11px] font-semibold text-white/58 transition-transform group-open:rotate-180">
+            ▾
+          </span>
+        </summary>
+        <div className="mt-2 grid grid-cols-2 gap-1.5">
+          {bucketOrder.map((bucket) => (
+            <div key={bucket} className="system-stat-tile rounded-xl px-2.5 py-2">
+              <p className="system-label text-white/45">{bucket}</p>
+              <p className="mt-1 text-lg font-semibold text-white">
+                {isReady ? filteredPlanner.grouped[bucket].length : "—"}
+              </p>
+            </div>
+          ))}
+        </div>
+      </details>
 
       <InfoCard
         title="Completed Today"
@@ -1070,20 +1184,20 @@ export default function PlannerPage() {
             {completedTodayTasks.map((task) => (
               <div
                 key={task.id}
-                className="system-subtle-panel system-card-interactive system-card-positive flex items-center justify-between gap-3 rounded-xl border border-white/[0.05] bg-black/40 px-3 py-2.5"
+                  className="system-subtle-panel system-card-interactive system-card-positive flex items-center justify-between gap-3 rounded-xl px-3 py-2.5"
               >
                 <span className="min-w-0 flex-1 text-sm font-medium text-white">
                   {task.title}
                 </span>
                 <span
-                  className={`shrink-0 rounded-full px-2 py-1 text-xs ${taskCategoryClasses[mapSupabaseTaskCategory(task.category)]}`}
+                  className={`shrink-0 px-2 py-1 text-xs ${taskCategoryClasses[mapSupabaseTaskCategory(task.category)]}`}
                 >
                   {mapSupabaseTaskCategory(task.category)}
                 </span>
                 <button
                   type="button"
                   onClick={async () => {
-                    await archiveTask(task.id);
+                    await archiveTask(task.id, sessionUserId);
                     await loadSupabaseTasks();
                   }}
                   className="system-button-secondary shrink-0 px-2 py-1 text-xs"
