@@ -710,7 +710,7 @@ export default function HomePage() {
   const canCompleteAction = Boolean(dashboard.nextAction.completionTarget) && dashboard.nextAction.tone !== "clear";
 
   return (
-    <div className="relative min-w-0 overflow-hidden px-0.5 py-0.5 text-white sm:px-2">
+    <div className="home-screen system-app-entry relative min-w-0 overflow-hidden px-0.5 py-0.5 text-white sm:px-2">
       <div className="pointer-events-none absolute inset-[-2rem] z-0 bg-[var(--bg-0)]" />
       <div className="pointer-events-none absolute inset-[-2rem] z-0 bg-[radial-gradient(circle_at_18%_16%,rgba(98,116,154,0.03),transparent_36%),radial-gradient(circle_at_92%_8%,rgba(108,122,146,0.018),transparent_30%),linear-gradient(102deg,transparent_0%,rgba(122,142,170,0.016)_48%,transparent_76%),var(--bg-0)]" />
       <div className="pointer-events-none absolute inset-[-2rem] z-0 opacity-[0.026] [background-image:radial-gradient(circle_at_12%_18%,rgba(255,255,255,0.18)_0_0.28px,transparent_0.82px),radial-gradient(circle_at_78%_34%,rgba(190,194,204,0.08)_0_0.34px,transparent_0.92px)] [background-position:0_0,38px_21px] [background-size:220px_170px,310px_230px]" />
@@ -914,10 +914,10 @@ function NextActionPanel({
             <h1 className="system-hero-title mt-1.5 text-[1.72rem] font-black leading-[0.95] tracking-[-0.01em] sm:mt-5 sm:text-[3.3rem] lg:whitespace-nowrap xl:text-[4rem]">
               Next Action
             </h1>
-            <p className="system-muted-copy mt-1.5 max-w-[21rem] break-words text-[0.78rem] leading-[1.15rem] [overflow-wrap:anywhere] sm:mt-6 sm:max-w-[36rem] sm:text-[1.06rem] sm:leading-8">
+            <p className="system-muted-copy mt-1.5 hidden max-w-[21rem] break-words text-[0.78rem] leading-[1.15rem] [overflow-wrap:anywhere] sm:mt-6 sm:block sm:max-w-[36rem] sm:text-[1.06rem] sm:leading-8">
               &ldquo;{systemMessage}&rdquo;
             </p>
-            <p className="mt-1 font-mono text-[0.54rem] font-bold uppercase tracking-[0.12em] text-[rgba(135,151,178,0.34)] sm:mt-2 sm:text-[0.64rem]">System Message</p>
+            <p className="mt-1 hidden font-mono text-[0.54rem] font-bold uppercase tracking-[0.12em] text-[rgba(135,151,178,0.34)] sm:mt-2 sm:block sm:text-[0.64rem]">System Message</p>
 
             <div className="mt-2 flex flex-wrap items-center gap-1.5 sm:mt-6 sm:gap-2.5">
               <span className="system-command-pill sm:hidden">
@@ -934,7 +934,7 @@ function NextActionPanel({
                 <span className="system-command-pill-dot" />
                 Deep Focus
               </span>
-              <span className="system-command-pill">
+              <span className="system-command-pill hidden sm:inline-flex">
                 <svg aria-hidden="true" className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none">
                   <path d="M5 6.3a3 3 0 0 1 6 0c0 3.2 1.3 3.9 1.3 3.9H3.7S5 9.5 5 6.3Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
                   <path d="m3.4 3.4 9.2 9.2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
@@ -972,19 +972,19 @@ function NextActionPanel({
                 <p className="mt-1 max-w-full font-mono text-[0.6rem] font-bold uppercase leading-4 tracking-[0.08em] text-white/40 sm:max-w-3xl sm:overflow-hidden sm:text-ellipsis sm:whitespace-nowrap">
                   {contextLine}
                 </p>
-                <div className="mt-2 h-px max-w-full bg-[rgba(180,190,210,0.095)] sm:max-w-3xl" />
-                <p className="mt-1.5 max-w-full text-[0.72rem] leading-[1.05rem] text-white/38 sm:max-w-3xl sm:text-[0.9rem] sm:leading-6">
+                <div className="mt-2 hidden h-px max-w-full bg-[rgba(180,190,210,0.095)] sm:block sm:max-w-3xl" />
+                <p className="mt-1.5 hidden max-w-full text-[0.72rem] leading-[1.05rem] text-white/38 sm:block sm:max-w-3xl sm:text-[0.9rem] sm:leading-6">
                   {descriptionLine}
                 </p>
               </div>
 
               <div className="flex max-w-full flex-col gap-2 md:min-w-[10.75rem] md:items-end">
-                <span className="system-next-action-tag inline-flex w-fit items-center rounded-full border px-3 py-1 font-mono text-[0.64rem] font-black uppercase tracking-[0.12em] sm:self-end">
+                <span className="system-next-action-tag inline-flex w-fit items-center rounded-full border px-2.5 py-0.5 font-mono text-[0.58rem] font-black uppercase tracking-[0.12em] sm:self-end sm:px-3 sm:py-1 sm:text-[0.64rem]">
                   {contextTag}
                 </span>
                 <button
                   type="button"
-                  className="system-button-primary system-next-action-primary inline-flex min-h-9 w-full min-w-0 items-center justify-center rounded-[12px] px-3 py-2 text-sm font-bold disabled:cursor-not-allowed disabled:border-white/[0.03] disabled:bg-black/20 disabled:text-white/36 disabled:shadow-none md:w-[10.75rem] md:min-w-[10rem] md:font-mono md:font-black"
+                  className="system-button-primary system-next-action-primary inline-flex min-h-8 w-full min-w-0 items-center justify-center rounded-[11px] px-3 py-1.5 text-sm font-bold disabled:cursor-not-allowed disabled:border-white/[0.03] disabled:bg-black/20 disabled:text-white/36 disabled:shadow-none sm:min-h-9 sm:py-2 md:w-[10.75rem] md:min-w-[10rem] md:font-mono md:font-black"
                   disabled={!hasHydrated || action.tone === "clear"}
                   onClick={onStartFocus}
                 >
@@ -992,7 +992,7 @@ function NextActionPanel({
                 </button>
                 <button
                   type="button"
-                  className="system-button-secondary inline-flex min-h-9 w-full min-w-0 items-center justify-center rounded-[12px] px-3 py-2 text-sm font-semibold opacity-70 disabled:cursor-not-allowed disabled:border-white/[0.03] disabled:bg-black/18 disabled:text-white/30 disabled:opacity-100 disabled:shadow-none md:w-[10.75rem] md:min-w-[10rem] md:font-mono md:font-bold"
+                  className="system-button-secondary inline-flex min-h-8 w-full min-w-0 items-center justify-center rounded-[11px] px-3 py-1.5 text-sm font-semibold opacity-70 disabled:cursor-not-allowed disabled:border-white/[0.03] disabled:bg-black/18 disabled:text-white/30 disabled:opacity-100 disabled:shadow-none sm:min-h-9 sm:py-2 md:w-[10.75rem] md:min-w-[10rem] md:font-mono md:font-bold"
                   disabled={!hasHydrated || !canComplete}
                   onClick={onMarkComplete}
                   title={canComplete ? undefined : "This action needs exact logging on its source page."}
