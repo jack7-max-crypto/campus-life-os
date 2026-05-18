@@ -1,8 +1,18 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import Card, { Card as InfoCard, MetricRow } from "@/components/ui/card";
+import { BodyPortal } from "@/components/ui/body-portal";
 import { Assignment } from "@/lib/academics/types";
 import { formatDate } from "@/lib/academics/utils";
 import { useCourses } from "@/lib/academics/useCourses";
@@ -109,6 +119,101 @@ function createTaskDraft(): TaskDraft {
     category: "Personal",
     note: "",
   };
+}
+
+function PlannerAddTaskFields({
+  taskDraft,
+  onTaskDraftChange,
+  onClose,
+  showSheetHeader = false,
+}: {
+  taskDraft: TaskDraft;
+  onTaskDraftChange: Dispatch<SetStateAction<TaskDraft>>;
+  onClose?: () => void;
+  showSheetHeader?: boolean;
+}) {
+  return (
+    <>
+      {showSheetHeader ? (
+        <div className="mb-1 flex items-center justify-between gap-3 md:hidden">
+          <div>
+            <p className="system-label text-white/45">Planner</p>
+            <p className="text-sm font-semibold text-white">Add task</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="system-button-subtle px-2.5 py-1.5 text-sm text-white/65"
+          >
+            X
+          </button>
+        </div>
+      ) : null}
+
+      <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+        <label className="system-label text-white/45">
+          Title
+          <input
+            required
+            value={taskDraft.title}
+            onChange={(event) =>
+              onTaskDraftChange((previous) => ({ ...previous, title: event.target.value }))
+            }
+            className={plannerFieldClassName}
+          />
+        </label>
+
+        <label className="system-label text-white/45">
+          Due date
+          <input
+            required
+            type="date"
+            value={taskDraft.dueDate}
+            onChange={(event) =>
+              onTaskDraftChange((previous) => ({ ...previous, dueDate: event.target.value }))
+            }
+            className={plannerFieldClassName}
+          />
+        </label>
+
+        <label className="system-label text-white/45">
+          Category
+          <select
+            value={taskDraft.category}
+            onChange={(event) =>
+              onTaskDraftChange((previous) => ({
+                ...previous,
+                category: event.target.value as PlannerTaskCategory,
+              }))
+            }
+            className={plannerFieldClassName}
+          >
+            {plannerTaskCategories.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="system-label text-white/45 sm:col-span-2">
+          Note (optional)
+          <textarea
+            rows={2}
+            value={taskDraft.note}
+            onChange={(event) =>
+              onTaskDraftChange((previous) => ({ ...previous, note: event.target.value }))
+            }
+            className={plannerFieldClassName}
+          />
+        </label>
+      </div>
+
+      <button type="submit" className={plannerPrimaryButtonClassName}>
+        Add task
+      </button>
+    </>
+  );
 }
 
 function toCalendarDay(value: string) {
@@ -810,97 +915,35 @@ export default function PlannerPage() {
           {isAddTaskOpen ? "Close add task" : "Add a task"}
         </button>
         {isAddTaskOpen ? (
-          <button
-            type="button"
-            aria-label="Close add task panel"
-            className="fixed inset-0 z-[55] bg-black/72 md:hidden"
-            onClick={() => setIsAddTaskOpen(false)}
-          />
-        ) : null}
-        <form
-          data-scroll-lock-scrollable="true"
-          className={`${
-            isAddTaskOpen
-              ? "fixed inset-x-2 bottom-[calc(env(safe-area-inset-bottom)+0.55rem)] z-[60] mx-auto block max-h-[calc(100dvh-1.5rem-env(safe-area-inset-bottom))] max-w-lg overflow-y-auto rounded-t-[20px] border border-white/[0.12] bg-[#030406]/[0.98] p-3 shadow-[0_-22px_70px_rgba(0,0,0,0.82),inset_0_1px_0_rgba(255,255,255,0.08)] md:static md:max-h-none md:max-w-none md:overflow-visible md:rounded-none md:border-0 md:bg-transparent md:p-0 md:shadow-none"
-              : "hidden"
-          } space-y-2 md:block md:space-y-3`}
-          onSubmit={handleAddTask}
-        >
-          <div className="mb-1 flex items-center justify-between gap-3 md:hidden">
-            <div>
-              <p className="system-label text-white/45">Planner</p>
-              <p className="text-sm font-semibold text-white">Add task</p>
-            </div>
+          <BodyPortal>
             <button
               type="button"
+              aria-label="Close add task panel"
+              className="fixed inset-0 z-[90] bg-black/72 md:hidden"
               onClick={() => setIsAddTaskOpen(false)}
-              className="system-button-subtle px-2.5 py-1.5 text-sm text-white/65"
+            />
+            <form
+              data-scroll-lock-scrollable="true"
+              className="fixed inset-x-2 bottom-[calc(env(safe-area-inset-bottom)+0.55rem)] z-[100] mx-auto block max-h-[calc(100dvh-1.5rem-env(safe-area-inset-bottom))] max-w-lg space-y-2 overflow-y-auto rounded-t-[20px] border border-white/[0.12] bg-[#030406]/[0.98] p-3 shadow-[0_-22px_70px_rgba(0,0,0,0.82),inset_0_1px_0_rgba(255,255,255,0.08)] md:hidden"
+              onSubmit={handleAddTask}
             >
-              X
-            </button>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
-            <label className="system-label text-white/45">
-              Title
-              <input
-                required
-                value={taskDraft.title}
-                onChange={(event) =>
-                  setTaskDraft((previous) => ({ ...previous, title: event.target.value }))
-                }
-                className={plannerFieldClassName}
+              <PlannerAddTaskFields
+                taskDraft={taskDraft}
+                onTaskDraftChange={setTaskDraft}
+                onClose={() => setIsAddTaskOpen(false)}
+                showSheetHeader
               />
-            </label>
-
-            <label className="system-label text-white/45">
-              Due date
-              <input
-                required
-                type="date"
-                value={taskDraft.dueDate}
-                onChange={(event) =>
-                  setTaskDraft((previous) => ({ ...previous, dueDate: event.target.value }))
-                }
-                className={plannerFieldClassName}
-              />
-            </label>
-
-            <label className="system-label text-white/45">
-              Category
-              <select
-                value={taskDraft.category}
-                onChange={(event) =>
-                  setTaskDraft((previous) => ({
-                    ...previous,
-                    category: event.target.value as PlannerTaskCategory,
-                  }))
-                }
-                className={plannerFieldClassName}
-              >
-                {plannerTaskCategories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="system-label text-white/45 sm:col-span-2">
-              Note (optional)
-              <textarea
-                rows={2}
-                value={taskDraft.note}
-                onChange={(event) =>
-                  setTaskDraft((previous) => ({ ...previous, note: event.target.value }))
-                }
-                className={plannerFieldClassName}
-              />
-            </label>
-          </div>
-
-          <button type="submit" className={plannerPrimaryButtonClassName}>
-            Add task
-          </button>
+            </form>
+          </BodyPortal>
+        ) : null}
+        <form
+          className="hidden space-y-3 md:block"
+          onSubmit={handleAddTask}
+        >
+          <PlannerAddTaskFields
+            taskDraft={taskDraft}
+            onTaskDraftChange={setTaskDraft}
+          />
         </form>
       </InfoCard>
 

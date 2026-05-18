@@ -5,6 +5,7 @@ import { useFocusMode } from "@/components/focus/focus-provider";
 import { completeFocusSessionTask } from "@/lib/focus/task-completion";
 import { formatDate } from "@/lib/academics/utils";
 import { useScrollLock } from "@/lib/ui/useScrollLock";
+import { BodyPortal } from "@/components/ui/body-portal";
 
 const secondaryButtonClassName =
   "system-button-secondary px-3 py-2 text-sm";
@@ -45,7 +46,7 @@ export function FocusLayoutShell({
             {header}
           </div>
           <main
-            className={`relative flex-1 overflow-hidden px-2.5 pt-2.5 pb-[calc(5.75rem+env(safe-area-inset-bottom))] sm:px-6 sm:pt-6 sm:pb-32 lg:px-8 lg:py-6 ${
+            className={`relative flex-1 overflow-hidden px-2.5 pt-2.5 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:px-6 sm:pt-6 sm:pb-32 lg:px-8 lg:py-6 ${
               hardFocusActive ? "pb-24 sm:pb-24" : ""
             }`}
           >
@@ -82,7 +83,8 @@ function HardFocusOverlay() {
   const dueDateLabel = session.dueDate ? formatDate(session.dueDate) : null;
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-[70]">
+    <BodyPortal>
+    <div className="pointer-events-none fixed inset-0 z-[110]">
       <div className="absolute inset-0 bg-[#030304]/96" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(245,247,248,0.07),rgba(180,184,194,0.022)_24%,transparent_58%),radial-gradient(ellipse_at_center,transparent_0%,transparent_42%,rgba(0,0,0,0.9)_100%)]" />
       <div className="absolute inset-0 system-grain" />
@@ -191,5 +193,6 @@ function HardFocusOverlay() {
         </div>
       </div>
     </div>
+    </BodyPortal>
   );
 }

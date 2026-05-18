@@ -3,6 +3,7 @@
 import { formatDate } from "@/lib/academics/utils";
 import { useFocusMode } from "@/components/focus/focus-provider";
 import { completeFocusSessionTask } from "@/lib/focus/task-completion";
+import { BodyPortal } from "@/components/ui/body-portal";
 
 const secondaryButtonClassName =
   "system-button-secondary px-3 py-2 text-sm";
@@ -36,9 +37,9 @@ export function FocusModeBar() {
   };
 
   return (
-    <>
-      <div className="fixed inset-0 z-50 bg-black/42 backdrop-blur-[2px] sm:hidden" />
-      <aside className="pointer-events-none fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+4.1rem)] z-[60] sm:inset-x-auto sm:right-6 sm:bottom-6 sm:w-[25rem]">
+    <BodyPortal>
+      <div className="fixed inset-0 z-[90] bg-black/42 backdrop-blur-[2px] sm:hidden" />
+      <aside className="pointer-events-none fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+4.1rem)] z-[100] sm:inset-x-auto sm:right-6 sm:bottom-6 sm:w-[25rem]">
       <div
         data-scroll-lock-scrollable="true"
         className="system-panel system-card-shell pointer-events-auto relative max-h-[calc(100dvh-5.5rem-env(safe-area-inset-bottom))] overflow-y-auto border-white/[0.13] p-4 shadow-[0_24px_76px_rgba(0,0,0,0.82),0_0_22px_rgba(255,255,255,0.025)] sm:max-h-[calc(100dvh-2rem)]"
@@ -142,6 +143,6 @@ export function FocusModeBar() {
         </div>
       </div>
     </aside>
-    </>
+    </BodyPortal>
   );
 }

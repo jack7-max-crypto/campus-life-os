@@ -6,6 +6,7 @@ let lockCount = 0;
 let scrollY = 0;
 let previousBodyStyles: Partial<CSSStyleDeclaration> = {};
 let previousHtmlStyles: Partial<CSSStyleDeclaration> = {};
+let touchStartY = 0;
 const scrollableSelector = "[data-scroll-lock-scrollable='true']";
 
 function shouldLock(mediaQuery?: string) {
@@ -53,6 +54,7 @@ function lockScroll() {
       body.style.paddingRight = `${scrollbarWidth}px`;
     }
 
+    document.addEventListener("touchstart", recordTouchStart, { passive: true });
     document.addEventListener("touchmove", preventBackgroundTouchMove, { passive: false });
   }
 
@@ -82,8 +84,13 @@ function unlockScroll() {
   body.style.right = previousBodyStyles.right ?? "";
   body.style.width = previousBodyStyles.width ?? "";
   body.style.paddingRight = previousBodyStyles.paddingRight ?? "";
+  document.removeEventListener("touchstart", recordTouchStart);
   document.removeEventListener("touchmove", preventBackgroundTouchMove);
   window.scrollTo(0, scrollY);
+}
+
+function recordTouchStart(event: TouchEvent) {
+  touchStartY = event.touches[0]?.clientY ?? 0;
 }
 
 function preventBackgroundTouchMove(event: TouchEvent) {
@@ -92,7 +99,21 @@ function preventBackgroundTouchMove(event: TouchEvent) {
     return;
   }
 
-  if (!event.target.closest(scrollableSelector)) {
+  const scrollableElement = event.target.closest(scrollableSelector);
+
+  if (!(scrollableElement instanceof HTMLElement)) {
+    event.preventDefault();
+    return;
+  }
+
+  const currentY = event.touches[0]?.clientY ?? touchStartY;
+  const deltaY = currentY - touchStartY;
+  const isAtTop = scrollableElement.scrollTop <= 0;
+  const isAtBottom =
+    scrollableElement.scrollTop + scrollableElement.clientHeight >=
+    scrollableElement.scrollHeight - 1;
+
+  if ((isAtTop && deltaY > 0) || (isAtBottom && deltaY < 0)) {
     event.preventDefault();
   }
 }

@@ -64,9 +64,9 @@ export default function RootLayout({
           >
             {children}
           </FocusLayoutShell>
-          <MobileBottomNav />
           <FocusModeBar />
         </FocusProvider>
+        <MobileBottomNav />
       </body>
     </html>
   );

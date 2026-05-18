@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
+import { BodyPortal } from "@/components/ui/body-portal";
 import {
   LIFT_LABELS,
   LIFT_TYPES,
@@ -621,7 +622,8 @@ function NumberEntryDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/78 p-2 pb-[calc(env(safe-area-inset-bottom)+0.65rem)] sm:items-center sm:p-4">
+    <BodyPortal>
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/78 p-2 pb-[calc(env(safe-area-inset-bottom)+0.65rem)] sm:items-center sm:p-4">
       <button
         type="button"
         aria-label="Close dialog"
@@ -682,6 +684,7 @@ function NumberEntryDialog({
         </form>
       </div>
     </div>
+    </BodyPortal>
   );
 }
 
@@ -743,7 +746,8 @@ function GoalEditorDialog({
   ];
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/78 p-2 pb-[calc(env(safe-area-inset-bottom)+0.65rem)] sm:items-center sm:p-4">
+    <BodyPortal>
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/78 p-2 pb-[calc(env(safe-area-inset-bottom)+0.65rem)] sm:items-center sm:p-4">
       <button
         type="button"
         aria-label="Close goal editor"
@@ -819,6 +823,7 @@ function GoalEditorDialog({
         </form>
       </div>
     </div>
+    </BodyPortal>
   );
 }
 
@@ -842,7 +847,8 @@ function LiftEntryDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/78 p-2 pb-[calc(env(safe-area-inset-bottom)+0.65rem)] sm:items-center sm:p-4">
+    <BodyPortal>
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/78 p-2 pb-[calc(env(safe-area-inset-bottom)+0.65rem)] sm:items-center sm:p-4">
       <button
         type="button"
         aria-label="Close dialog"
@@ -947,6 +953,7 @@ function LiftEntryDialog({
         </form>
       </div>
     </div>
+    </BodyPortal>
   );
 }
 
