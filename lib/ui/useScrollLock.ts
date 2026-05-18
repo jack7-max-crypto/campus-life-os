@@ -7,6 +7,7 @@ let scrollY = 0;
 let previousBodyStyles: Partial<CSSStyleDeclaration> = {};
 let previousHtmlStyles: Partial<CSSStyleDeclaration> = {};
 let touchStartY = 0;
+const scrollLockClassName = "is-scroll-locked";
 const scrollableSelector = "[data-scroll-lock-scrollable='true']";
 
 function shouldLock(mediaQuery?: string) {
@@ -25,11 +26,13 @@ function lockScroll() {
     scrollY = window.scrollY;
     previousHtmlStyles = {
       overflow: documentElement.style.overflow,
+      height: documentElement.style.height,
       overscrollBehavior: documentElement.style.overscrollBehavior,
       scrollBehavior: documentElement.style.scrollBehavior,
     };
     previousBodyStyles = {
       overflow: body.style.overflow,
+      height: body.style.height,
       overscrollBehavior: body.style.overscrollBehavior,
       position: body.style.position,
       top: body.style.top,
@@ -39,10 +42,14 @@ function lockScroll() {
       paddingRight: body.style.paddingRight,
     };
 
+    documentElement.classList.add(scrollLockClassName);
+    body.classList.add(scrollLockClassName);
     documentElement.style.overflow = "hidden";
+    documentElement.style.height = "100%";
     documentElement.style.overscrollBehavior = "none";
     documentElement.style.scrollBehavior = "auto";
     body.style.overflow = "hidden";
+    body.style.height = "100%";
     body.style.overscrollBehavior = "none";
     body.style.position = "fixed";
     body.style.top = `-${scrollY}px`;
@@ -73,10 +80,16 @@ function unlockScroll() {
   }
 
   const { body, documentElement } = document;
+  const restoreScrollY = scrollY;
+
+  documentElement.classList.remove(scrollLockClassName);
+  body.classList.remove(scrollLockClassName);
   documentElement.style.overflow = previousHtmlStyles.overflow ?? "";
+  documentElement.style.height = previousHtmlStyles.height ?? "";
   documentElement.style.overscrollBehavior = previousHtmlStyles.overscrollBehavior ?? "";
   documentElement.style.scrollBehavior = previousHtmlStyles.scrollBehavior ?? "";
   body.style.overflow = previousBodyStyles.overflow ?? "";
+  body.style.height = previousBodyStyles.height ?? "";
   body.style.overscrollBehavior = previousBodyStyles.overscrollBehavior ?? "";
   body.style.position = previousBodyStyles.position ?? "";
   body.style.top = previousBodyStyles.top ?? "";
@@ -86,7 +99,11 @@ function unlockScroll() {
   body.style.paddingRight = previousBodyStyles.paddingRight ?? "";
   document.removeEventListener("touchstart", recordTouchStart);
   document.removeEventListener("touchmove", preventBackgroundTouchMove);
-  window.scrollTo(0, scrollY);
+  previousHtmlStyles = {};
+  previousBodyStyles = {};
+  scrollY = 0;
+  touchStartY = 0;
+  window.scrollTo(0, restoreScrollY);
 }
 
 function recordTouchStart(event: TouchEvent) {
