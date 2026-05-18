@@ -1,12 +1,13 @@
 @import "tailwindcss";
 
 html {
+  background: #050607;
   scroll-behavior: smooth;
 }
 
 :root {
   color-scheme: dark;
-  --background: #000000;
+  --background: #050607;
   --foreground: #fafafa;
   --space-void: #000000;
   --space-ink: #010101;
@@ -126,7 +127,7 @@ html {
 }
 
 .system-app-entry {
-  animation: appEntry 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: appEntry 420ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 
 .animate-focusCompleteIn {
@@ -140,6 +141,8 @@ html {
 
 body {
   position: relative;
+  min-height: 100%;
+  background-color: #050607;
   background:
     radial-gradient(circle at 0% 0%, rgba(245, 247, 248, 0.006), transparent 24rem),
     linear-gradient(135deg, rgba(255, 255, 255, 0.004), transparent 32%, rgba(0, 0, 0, 0.58) 100%),
@@ -2158,8 +2161,23 @@ body::after {
       inset 0 1px 0 rgba(255, 255, 255, 0.055);
   }
 
+  .system-background-field {
+    background: #050607;
+  }
+
+  .system-ambient-glow-field,
+  .system-directional-light,
+  .system-atmosphere-layer,
+  .system-radial-light,
+  .system-grain {
+    display: none;
+  }
+
   .home-screen {
-    contain: layout paint;
+    overflow: visible !important;
+    background:
+      radial-gradient(ellipse at 50% 0%, rgba(98, 116, 154, 0.026), transparent 48%),
+      #050607;
   }
 
   .home-screen .backdrop-blur-md {
@@ -2175,6 +2193,22 @@ body::after {
   .home-screen .system-radial-light,
   .home-screen .system-grain {
     animation: none;
+  }
+
+  .home-screen .pointer-events-none.absolute {
+    display: none;
+  }
+
+  .home-screen .system-hero-card,
+  .home-screen .system-command-card,
+  .home-screen .system-next-action-object {
+    animation: none;
+    transform: none;
+    transition: none;
+    will-change: auto;
+    box-shadow:
+      0 14px 34px rgba(0, 0, 0, 0.62),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
   }
 
   .system-panel:hover,

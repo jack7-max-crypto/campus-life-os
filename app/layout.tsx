@@ -33,7 +33,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#020203",
+  themeColor: "#050607",
 };
 
 export default function RootLayout({
@@ -42,8 +42,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full">
-      <body className="min-h-screen bg-black text-white antialiased">
+    <html lang="en" className="h-full bg-[#050607]" style={{ backgroundColor: "#050607" }}>
+      <body className="min-h-screen bg-[#050607] text-white antialiased" style={{ backgroundColor: "#050607" }}>
         <FocusProvider>
           <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
             <div className="absolute inset-0 system-background-field" />

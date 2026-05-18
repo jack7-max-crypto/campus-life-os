@@ -710,7 +710,7 @@ export default function HomePage() {
   const canCompleteAction = Boolean(dashboard.nextAction.completionTarget) && dashboard.nextAction.tone !== "clear";
 
   return (
-    <div className="home-screen system-app-entry relative min-w-0 overflow-hidden px-0.5 py-0.5 text-white sm:px-2">
+    <div className="home-screen system-app-entry relative min-w-0 overflow-visible px-0.5 py-0.5 text-white sm:overflow-hidden sm:px-2">
       <div className="pointer-events-none absolute inset-[-2rem] z-0 bg-[var(--bg-0)]" />
       <div className="pointer-events-none absolute inset-[-2rem] z-0 bg-[radial-gradient(circle_at_18%_16%,rgba(98,116,154,0.03),transparent_36%),radial-gradient(circle_at_92%_8%,rgba(108,122,146,0.018),transparent_30%),linear-gradient(102deg,transparent_0%,rgba(122,142,170,0.016)_48%,transparent_76%),var(--bg-0)]" />
       <div className="pointer-events-none absolute inset-[-2rem] z-0 opacity-[0.026] [background-image:radial-gradient(circle_at_12%_18%,rgba(255,255,255,0.18)_0_0.28px,transparent_0.82px),radial-gradient(circle_at_78%_34%,rgba(190,194,204,0.08)_0_0.34px,transparent_0.92px)] [background-position:0_0,38px_21px] [background-size:220px_170px,310px_230px]" />
