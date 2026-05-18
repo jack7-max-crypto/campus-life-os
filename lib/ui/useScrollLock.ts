@@ -6,6 +6,7 @@ let lockCount = 0;
 let scrollY = 0;
 let previousBodyStyles: Partial<CSSStyleDeclaration> = {};
 let previousHtmlStyles: Partial<CSSStyleDeclaration> = {};
+const scrollableSelector = "[data-scroll-lock-scrollable='true']";
 
 function shouldLock(mediaQuery?: string) {
   if (typeof window === "undefined") {
@@ -51,6 +52,8 @@ function lockScroll() {
     if (scrollbarWidth > 0) {
       body.style.paddingRight = `${scrollbarWidth}px`;
     }
+
+    document.addEventListener("touchmove", preventBackgroundTouchMove, { passive: false });
   }
 
   lockCount += 1;
@@ -79,7 +82,19 @@ function unlockScroll() {
   body.style.right = previousBodyStyles.right ?? "";
   body.style.width = previousBodyStyles.width ?? "";
   body.style.paddingRight = previousBodyStyles.paddingRight ?? "";
+  document.removeEventListener("touchmove", preventBackgroundTouchMove);
   window.scrollTo(0, scrollY);
+}
+
+function preventBackgroundTouchMove(event: TouchEvent) {
+  if (!(event.target instanceof Element)) {
+    event.preventDefault();
+    return;
+  }
+
+  if (!event.target.closest(scrollableSelector)) {
+    event.preventDefault();
+  }
 }
 
 export function useScrollLock(active: boolean, mediaQuery?: string) {

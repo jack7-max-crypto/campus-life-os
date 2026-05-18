@@ -61,10 +61,10 @@ export default function RootLayout({
           <FocusLayoutShell
             sidebar={<Sidebar />}
             header={<Header />}
-            bottomNav={<MobileBottomNav />}
           >
             {children}
           </FocusLayoutShell>
+          <MobileBottomNav />
           <FocusModeBar />
         </FocusProvider>
       </body>

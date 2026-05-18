@@ -818,6 +818,7 @@ export default function PlannerPage() {
           />
         ) : null}
         <form
+          data-scroll-lock-scrollable="true"
           className={`${
             isAddTaskOpen
               ? "fixed inset-x-2 bottom-[calc(env(safe-area-inset-bottom)+0.55rem)] z-[60] mx-auto block max-h-[calc(100dvh-1.5rem-env(safe-area-inset-bottom))] max-w-lg overflow-y-auto rounded-t-[20px] border border-white/[0.12] bg-[#030406]/[0.98] p-3 shadow-[0_-22px_70px_rgba(0,0,0,0.82),inset_0_1px_0_rgba(255,255,255,0.08)] md:static md:max-h-none md:max-w-none md:overflow-visible md:rounded-none md:border-0 md:bg-transparent md:p-0 md:shadow-none"

@@ -36,8 +36,13 @@ export function FocusModeBar() {
   };
 
   return (
-    <aside className="pointer-events-none fixed inset-x-3 bottom-24 z-40 sm:inset-x-auto sm:right-6 sm:bottom-6 sm:w-[25rem]">
-      <div className="system-panel system-card-shell pointer-events-auto relative overflow-hidden border-white/[0.13] p-4 shadow-[0_24px_76px_rgba(0,0,0,0.82),0_0_22px_rgba(255,255,255,0.025)]">
+    <>
+      <div className="fixed inset-0 z-50 bg-black/42 backdrop-blur-[2px] sm:hidden" />
+      <aside className="pointer-events-none fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+4.1rem)] z-[60] sm:inset-x-auto sm:right-6 sm:bottom-6 sm:w-[25rem]">
+      <div
+        data-scroll-lock-scrollable="true"
+        className="system-panel system-card-shell pointer-events-auto relative max-h-[calc(100dvh-5.5rem-env(safe-area-inset-bottom))] overflow-y-auto border-white/[0.13] p-4 shadow-[0_24px_76px_rgba(0,0,0,0.82),0_0_22px_rgba(255,255,255,0.025)] sm:max-h-[calc(100dvh-2rem)]"
+      >
         <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/22 to-transparent" />
         <div className="relative space-y-4">
           <div className="space-y-2">
@@ -137,5 +142,6 @@ export function FocusModeBar() {
         </div>
       </div>
     </aside>
+    </>
   );
 }

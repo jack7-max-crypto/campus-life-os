@@ -632,6 +632,7 @@ function NumberEntryDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="fitness-dialog-title"
+        data-scroll-lock-scrollable="true"
         className="system-panel relative max-h-[calc(100dvh-1.25rem-env(safe-area-inset-bottom))] w-full max-w-sm overflow-y-auto rounded-t-[22px] p-4 shadow-[0_28px_76px_rgba(0,0,0,0.8)] sm:max-h-[calc(100dvh-2rem)] sm:rounded-[24px]"
       >
         <div className="mb-4 flex items-start justify-between gap-3">
@@ -753,6 +754,7 @@ function GoalEditorDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="fitness-goals-dialog-title"
+        data-scroll-lock-scrollable="true"
         className="system-panel relative max-h-[calc(100dvh-1.25rem-env(safe-area-inset-bottom))] w-full max-w-md overflow-y-auto rounded-t-[20px] p-3 shadow-[0_28px_76px_rgba(0,0,0,0.8)] sm:max-h-[calc(100dvh-2rem)] sm:rounded-[24px] sm:p-4"
       >
         <div className="mb-3 flex items-start justify-between gap-3 sm:mb-4">
@@ -851,6 +853,7 @@ function LiftEntryDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="fitness-lift-dialog-title"
+        data-scroll-lock-scrollable="true"
         className="system-panel relative max-h-[calc(100dvh-1.25rem-env(safe-area-inset-bottom))] w-full max-w-sm overflow-y-auto rounded-t-[22px] p-4 shadow-[0_28px_76px_rgba(0,0,0,0.8)] sm:max-h-[calc(100dvh-2rem)] sm:rounded-[24px]"
       >
         <div className="mb-4 flex items-start justify-between gap-3">

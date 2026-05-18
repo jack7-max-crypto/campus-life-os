@@ -14,12 +14,10 @@ const primaryButtonClassName =
 export function FocusLayoutShell({
   sidebar,
   header,
-  bottomNav,
   children,
 }: {
   sidebar: ReactNode;
   header: ReactNode;
-  bottomNav: ReactNode;
   children: ReactNode;
 }) {
   const { hasHydrated, session, isHardFocus } = useFocusMode();
@@ -56,7 +54,6 @@ export function FocusLayoutShell({
               {children}
             </div>
           </main>
-          <div className={hardFocusActive ? "hidden" : "block"}>{bottomNav}</div>
         </div>
       </div>
       {hardFocusActive ? <HardFocusOverlay /> : null}
@@ -85,12 +82,15 @@ function HardFocusOverlay() {
   const dueDateLabel = session.dueDate ? formatDate(session.dueDate) : null;
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-30">
+    <div className="pointer-events-none fixed inset-0 z-[70]">
       <div className="absolute inset-0 bg-[#030304]/96" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(245,247,248,0.07),rgba(180,184,194,0.022)_24%,transparent_58%),radial-gradient(ellipse_at_center,transparent_0%,transparent_42%,rgba(0,0,0,0.9)_100%)]" />
       <div className="absolute inset-0 system-grain" />
       <div className="flex min-h-full items-center justify-center px-4 py-8 sm:px-6">
-        <div className="system-panel system-card-shell pointer-events-auto relative w-full max-w-3xl border-white/[0.14] p-6 shadow-[0_32px_110px_rgba(0,0,0,0.9),0_0_24px_rgba(255,255,255,0.028)] sm:p-8">
+        <div
+          data-scroll-lock-scrollable="true"
+          className="system-panel system-card-shell pointer-events-auto relative max-h-[calc(100dvh-2rem)] w-full max-w-3xl overflow-y-auto border-white/[0.14] p-6 shadow-[0_32px_110px_rgba(0,0,0,0.9),0_0_24px_rgba(255,255,255,0.028)] sm:max-h-[calc(100dvh-4rem)] sm:p-8"
+        >
           <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-white/24 to-transparent" />
           <div className="relative space-y-8">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
