@@ -1236,9 +1236,9 @@ export default function FitnessPage() {
     activeDialog === "calories" ? "500" : activeDialog === "protein" ? "40" : "182.4";
   const dialogStep = activeDialog === "weight" ? "0.1" : "1";
   const quickActions: Array<{ type: QuickAction; label: string; detail: string }> = [
-    { type: "calories", label: "Add calories", detail: "Increment today's total" },
-    { type: "protein", label: "Add protein", detail: "Add grams to today" },
-    { type: "weight", label: "Log weight", detail: "Set today's weigh-in" },
+    { type: "calories", label: "Add calories", detail: "Add to today" },
+    { type: "protein", label: "Add protein", detail: "Add grams" },
+    { type: "weight", label: "Log weight", detail: "Update weight" },
   ];
   const hasLiftEntries = liftEntries.length > 0;
   const isNumberDialogOpen = activeDialog !== null && activeDialog !== "lift";
@@ -1254,7 +1254,7 @@ export default function FitnessPage() {
             Fitness
           </h2>
           <p className="system-page-copy max-w-[calc(100vw-2rem)] truncate text-[0.82rem] leading-5 [overflow-wrap:anywhere] sm:max-w-2xl sm:whitespace-normal sm:text-sm sm:leading-6">
-            Quick logging for today, with deeper trends tucked behind Progress.
+            Quick logging now. Trends live in Progress.
           </p>
           <div
             role="tablist"
@@ -1298,7 +1298,7 @@ export default function FitnessPage() {
                       {todayLog.workoutCompleted ? "Undo workout" : "Mark workout complete"}
                     </span>
                     <span className={`mt-0.5 block text-[0.72rem] font-medium sm:mt-1 sm:text-xs ${todayLog.workoutCompleted ? "text-white/45" : "text-white/70"}`}>
-                      {todayLog.workoutCompleted ? "Clear today's training status" : "Keep today's streak current"}
+                      {todayLog.workoutCompleted ? "Clear today" : "Keep streak current"}
                     </span>
                   </button>
                 </div>

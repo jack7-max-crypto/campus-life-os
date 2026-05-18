@@ -434,8 +434,8 @@ function createFitnessAction(check: DailyCheck): HomeAction {
     title: check.label,
     supportingLine:
       check.kind === "workout"
-        ? "Training is the remaining daily execution signal."
-        : "Log the exact intake on the Fitness page to close this target.",
+        ? "Training is the open fitness signal."
+        : "Log intake in Fitness to close this target.",
     timingLabel: "Due today",
     tone: "today",
     priorityRank: check.kind === "workout" ? 4 : 5,

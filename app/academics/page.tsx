@@ -387,7 +387,7 @@ export default function AcademicsPage() {
             Academics
           </h2>
           <p className="system-page-copy mt-0.5 max-w-[calc(100vw-2rem)] text-[0.82rem] [overflow-wrap:anywhere] sm:mt-1 sm:max-w-2xl sm:text-sm">
-            Current manual and Canvas assignments, grouped by due date.
+            Manual and Canvas assignments by due date.
           </p>
         </div>
       </section>

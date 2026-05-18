@@ -78,10 +78,10 @@ export function FocusModeBar() {
             </p>
             <p className="mt-1 text-sm text-white/48">
               {isComplete
-                ? "Nice work. Mark the task done or roll straight into another block."
+                ? "Mark it done or start another block."
                 : session.isPaused
-                  ? "Timer is paused and will resume from the stored remaining time."
-                  : "Countdown stays accurate across page changes and refreshes."}
+                  ? "Paused at the stored time."
+                  : "Timer keeps running across screens."}
             </p>
           </div>
 

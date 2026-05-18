@@ -5,7 +5,7 @@ import { useEffect } from "react";
 let lockCount = 0;
 let scrollY = 0;
 let previousBodyStyles: Partial<CSSStyleDeclaration> = {};
-let previousHtmlOverflow = "";
+let previousHtmlStyles: Partial<CSSStyleDeclaration> = {};
 
 function shouldLock(mediaQuery?: string) {
   if (typeof window === "undefined") {
@@ -21,9 +21,14 @@ function lockScroll() {
   if (lockCount === 0) {
     const scrollbarWidth = window.innerWidth - documentElement.clientWidth;
     scrollY = window.scrollY;
-    previousHtmlOverflow = documentElement.style.overflow;
+    previousHtmlStyles = {
+      overflow: documentElement.style.overflow,
+      overscrollBehavior: documentElement.style.overscrollBehavior,
+      scrollBehavior: documentElement.style.scrollBehavior,
+    };
     previousBodyStyles = {
       overflow: body.style.overflow,
+      overscrollBehavior: body.style.overscrollBehavior,
       position: body.style.position,
       top: body.style.top,
       left: body.style.left,
@@ -33,7 +38,10 @@ function lockScroll() {
     };
 
     documentElement.style.overflow = "hidden";
+    documentElement.style.overscrollBehavior = "none";
+    documentElement.style.scrollBehavior = "auto";
     body.style.overflow = "hidden";
+    body.style.overscrollBehavior = "none";
     body.style.position = "fixed";
     body.style.top = `-${scrollY}px`;
     body.style.left = "0";
@@ -60,8 +68,11 @@ function unlockScroll() {
   }
 
   const { body, documentElement } = document;
-  documentElement.style.overflow = previousHtmlOverflow;
+  documentElement.style.overflow = previousHtmlStyles.overflow ?? "";
+  documentElement.style.overscrollBehavior = previousHtmlStyles.overscrollBehavior ?? "";
+  documentElement.style.scrollBehavior = previousHtmlStyles.scrollBehavior ?? "";
   body.style.overflow = previousBodyStyles.overflow ?? "";
+  body.style.overscrollBehavior = previousBodyStyles.overscrollBehavior ?? "";
   body.style.position = previousBodyStyles.position ?? "";
   body.style.top = previousBodyStyles.top ?? "";
   body.style.left = previousBodyStyles.left ?? "";

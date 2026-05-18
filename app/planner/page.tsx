@@ -698,7 +698,7 @@ export default function PlannerPage() {
           Planner
         </h2>
         <p className="system-page-copy max-w-2xl text-[0.82rem] leading-5 sm:text-sm sm:leading-6">
-          One timeline for course assignments and your own custom tasks.
+          Course assignments and your tasks.
         </p>
         <div className="system-tab-rail mt-2 -mx-0.5 flex max-w-full items-center gap-1 overflow-x-auto rounded-[14px] p-1 [scrollbar-width:none] sm:mx-0 sm:mt-5 sm:w-fit sm:flex-wrap sm:gap-2 sm:rounded-[20px] sm:p-1.5 [&::-webkit-scrollbar]:hidden">
           <span className="system-label shrink-0 pl-1 text-white/45">Filter</span>

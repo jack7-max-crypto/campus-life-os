@@ -24,7 +24,9 @@ export function FocusLayoutShell({
 }) {
   const { hasHydrated, session, isHardFocus } = useFocusMode();
   const hardFocusActive = hasHydrated && session.isActive && isHardFocus;
+  const mobileFocusActive = hasHydrated && session.isActive && !isHardFocus;
   useScrollLock(hardFocusActive);
+  useScrollLock(mobileFocusActive, "(max-width: 767px)");
 
   return (
     <>
