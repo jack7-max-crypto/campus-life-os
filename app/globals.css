@@ -1968,6 +1968,10 @@ body::after {
 }
 
 .system-mobile-chrome {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
   border-top: 1px solid rgba(180, 190, 210, 0.11);
   background:
     radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.036), transparent 54%),
@@ -1976,6 +1980,8 @@ body::after {
     0 -24px 78px rgba(0, 0, 0, 0.8),
     inset 0 1px 0 rgba(255, 255, 255, 0.055);
   backdrop-filter: blur(18px) saturate(1.02);
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
 }
 
 @media (max-width: 640px) {

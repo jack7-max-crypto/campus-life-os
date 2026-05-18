@@ -22,6 +22,7 @@ import {
   usePlannerTasks,
 } from "@/lib/planner/usePlannerTasks";
 import { createClient } from "@/lib/supabase/client";
+import { useScrollLock } from "@/lib/ui/useScrollLock";
 
 const supabase = createClient();
 
@@ -238,6 +239,7 @@ export default function PlannerPage() {
     hasPlannerTasksHydrated &&
     (isOffline || authStatus !== "loading") &&
     (!isAuthenticated || hasLoadedSupabaseTasks);
+  useScrollLock(isAddTaskOpen, "(max-width: 767px)");
 
   const loadSupabaseTasks = useCallback(async (userId = sessionUserId) => {
     if (!userId) {
@@ -807,10 +809,35 @@ export default function PlannerPage() {
         >
           {isAddTaskOpen ? "Close add task" : "Add a task"}
         </button>
+        {isAddTaskOpen ? (
+          <button
+            type="button"
+            aria-label="Close add task panel"
+            className="fixed inset-0 z-[55] bg-black/72 md:hidden"
+            onClick={() => setIsAddTaskOpen(false)}
+          />
+        ) : null}
         <form
-          className={`${isAddTaskOpen ? "block" : "hidden"} space-y-2 md:block md:space-y-3`}
+          className={`${
+            isAddTaskOpen
+              ? "fixed inset-x-2 bottom-[calc(env(safe-area-inset-bottom)+0.55rem)] z-[60] mx-auto block max-h-[calc(100dvh-1.5rem-env(safe-area-inset-bottom))] max-w-lg overflow-y-auto rounded-t-[20px] border border-white/[0.12] bg-[#030406]/[0.98] p-3 shadow-[0_-22px_70px_rgba(0,0,0,0.82),inset_0_1px_0_rgba(255,255,255,0.08)] md:static md:max-h-none md:max-w-none md:overflow-visible md:rounded-none md:border-0 md:bg-transparent md:p-0 md:shadow-none"
+              : "hidden"
+          } space-y-2 md:block md:space-y-3`}
           onSubmit={handleAddTask}
         >
+          <div className="mb-1 flex items-center justify-between gap-3 md:hidden">
+            <div>
+              <p className="system-label text-white/45">Planner</p>
+              <p className="text-sm font-semibold text-white">Add task</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsAddTaskOpen(false)}
+              className="system-button-subtle px-2.5 py-1.5 text-sm text-white/65"
+            >
+              X
+            </button>
+          </div>
           <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
             <label className="system-label text-white/45">
               Title
@@ -1093,7 +1120,7 @@ export default function PlannerPage() {
                                   <span className="mt-0.5 line-clamp-1 text-[0.72rem] leading-4 text-white/35 sm:mt-1 sm:text-xs sm:leading-5">{item.note}</span>
                                 ) : null}
                               </div>
-                              <div className="grid w-full shrink-0 grid-cols-[minmax(0,1fr)_5.8rem] items-center gap-1.5 sm:flex sm:w-auto sm:flex-row sm:gap-2">
+                              <div className="grid w-full shrink-0 grid-cols-1 items-center gap-1.5 sm:flex sm:w-auto sm:flex-row sm:gap-2">
                                 <label className="sr-only" htmlFor={`priority-${item.itemType}-${item.id}`}>
                                   Priority
                                 </label>

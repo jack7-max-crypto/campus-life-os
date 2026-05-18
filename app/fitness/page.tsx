@@ -27,6 +27,7 @@ import {
   listWeightLogs,
 } from "@/lib/fitness/storage";
 import { useFitnessState } from "@/lib/fitness/useFitnessState";
+import { useScrollLock } from "@/lib/ui/useScrollLock";
 
 const weekdayFormatter = new Intl.DateTimeFormat(undefined, { weekday: "short" });
 const monthDayFormatter = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
@@ -613,12 +614,14 @@ function NumberEntryDialog({
   placeholder: string;
   step?: string;
 }) {
+  useScrollLock(open);
+
   if (!open) {
     return null;
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/78 p-4 sm:items-center">
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/78 p-2 pb-[calc(env(safe-area-inset-bottom)+0.65rem)] sm:items-center sm:p-4">
       <button
         type="button"
         aria-label="Close dialog"
@@ -629,7 +632,7 @@ function NumberEntryDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="fitness-dialog-title"
-        className="system-panel relative w-full max-w-sm rounded-[24px] p-4 shadow-[0_28px_76px_rgba(0,0,0,0.8)]"
+        className="system-panel relative max-h-[calc(100dvh-1.25rem-env(safe-area-inset-bottom))] w-full max-w-sm overflow-y-auto rounded-t-[22px] p-4 shadow-[0_28px_76px_rgba(0,0,0,0.8)] sm:max-h-[calc(100dvh-2rem)] sm:rounded-[24px]"
       >
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
@@ -696,6 +699,8 @@ function GoalEditorDialog({
   onClose: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
+  useScrollLock(open);
+
   if (!open) {
     return null;
   }
@@ -737,7 +742,7 @@ function GoalEditorDialog({
   ];
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/78 p-3 sm:items-center sm:p-4">
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/78 p-2 pb-[calc(env(safe-area-inset-bottom)+0.65rem)] sm:items-center sm:p-4">
       <button
         type="button"
         aria-label="Close goal editor"
@@ -748,7 +753,7 @@ function GoalEditorDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="fitness-goals-dialog-title"
-        className="system-panel relative w-full max-w-md rounded-[20px] p-3 shadow-[0_28px_76px_rgba(0,0,0,0.8)] sm:rounded-[24px] sm:p-4"
+        className="system-panel relative max-h-[calc(100dvh-1.25rem-env(safe-area-inset-bottom))] w-full max-w-md overflow-y-auto rounded-t-[20px] p-3 shadow-[0_28px_76px_rgba(0,0,0,0.8)] sm:max-h-[calc(100dvh-2rem)] sm:rounded-[24px] sm:p-4"
       >
         <div className="mb-3 flex items-start justify-between gap-3 sm:mb-4">
           <div>
@@ -828,12 +833,14 @@ function LiftEntryDialog({
   onClose: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
+  useScrollLock(open);
+
   if (!open) {
     return null;
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/78 p-4 sm:items-center">
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/78 p-2 pb-[calc(env(safe-area-inset-bottom)+0.65rem)] sm:items-center sm:p-4">
       <button
         type="button"
         aria-label="Close dialog"
@@ -844,7 +851,7 @@ function LiftEntryDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="fitness-lift-dialog-title"
-        className="system-panel relative w-full max-w-sm rounded-[24px] p-4 shadow-[0_28px_76px_rgba(0,0,0,0.8)]"
+        className="system-panel relative max-h-[calc(100dvh-1.25rem-env(safe-area-inset-bottom))] w-full max-w-sm overflow-y-auto rounded-t-[22px] p-4 shadow-[0_28px_76px_rgba(0,0,0,0.8)] sm:max-h-[calc(100dvh-2rem)] sm:rounded-[24px]"
       >
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>

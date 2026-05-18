@@ -60,7 +60,7 @@ export function MetricRow({
 
   return (
     <div
-      className={`system-stat-tile system-card-interactive flex min-w-0 items-center justify-between gap-2 rounded-xl px-2.5 py-1.5 transition-all duration-300 ease-out hover:-translate-y-[1px] hover:border-white/[0.16] sm:px-3 sm:py-2 ${
+      className={`system-stat-tile system-card-interactive flex min-w-0 flex-col items-start justify-between gap-1 rounded-xl px-2.5 py-1.5 transition-all duration-300 ease-out hover:-translate-y-[1px] hover:border-white/[0.16] sm:flex-row sm:items-center sm:gap-2 sm:px-3 sm:py-2 ${
         isDark
           ? ""
           : ""
@@ -75,7 +75,7 @@ export function MetricRow({
       >
         {label}
       </span>
-      <span className={`min-w-0 max-w-[45%] truncate text-right font-mono text-sm font-bold tracking-[-0.01em] ${isDark ? "text-white" : "text-white"}`}>
+      <span className={`min-w-0 max-w-full break-words text-left font-mono text-sm font-bold tracking-[-0.01em] sm:max-w-[45%] sm:truncate sm:text-right ${isDark ? "text-white" : "text-white"}`}>
         {value}
       </span>
     </div>

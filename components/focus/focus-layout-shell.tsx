@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useFocusMode } from "@/components/focus/focus-provider";
 import { completeFocusSessionTask } from "@/lib/focus/task-completion";
 import { formatDate } from "@/lib/academics/utils";
+import { useScrollLock } from "@/lib/ui/useScrollLock";
 
 const secondaryButtonClassName =
   "system-button-secondary px-3 py-2 text-sm";
@@ -23,6 +24,7 @@ export function FocusLayoutShell({
 }) {
   const { hasHydrated, session, isHardFocus } = useFocusMode();
   const hardFocusActive = hasHydrated && session.isActive && isHardFocus;
+  useScrollLock(hardFocusActive);
 
   return (
     <>
@@ -36,14 +38,14 @@ export function FocusLayoutShell({
         </div>
         <div className="flex min-h-screen flex-1 flex-col">
           <div
-            className={`transition-all duration-300 ease-out ${
+            className={`hidden transition-all duration-300 ease-out lg:block ${
               hardFocusActive ? "pointer-events-none h-0 overflow-hidden opacity-0" : "opacity-100"
             }`}
           >
             {header}
           </div>
           <main
-            className={`relative flex-1 overflow-hidden px-2.5 pt-2.5 pb-22 sm:px-6 sm:pt-6 sm:pb-32 lg:px-8 lg:py-6 ${
+            className={`relative flex-1 overflow-hidden px-2.5 pt-2.5 pb-[calc(5.75rem+env(safe-area-inset-bottom))] sm:px-6 sm:pt-6 sm:pb-32 lg:px-8 lg:py-6 ${
               hardFocusActive ? "pb-24 sm:pb-24" : ""
             }`}
           >
