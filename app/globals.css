@@ -2021,22 +2021,32 @@ body::after {
   will-change: auto;
 }
 
+@media (max-width: 1023px) {
+  html,
+  body {
+    height: 100%;
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    min-height: 100dvh;
+  }
+
+  main {
+    height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-padding-bottom: calc(6rem + env(safe-area-inset-bottom));
+  }
+}
+
 @media (max-width: 640px) {
   :root {
     --card-radius-lg: 14px;
     --card-radius-md: 12px;
     --card-radius-sm: 10px;
-  }
-
-  html,
-  body {
-    max-width: 100%;
-    overflow-x: hidden;
-  }
-
-  main {
-    overflow-x: hidden;
-    scroll-padding-bottom: calc(6rem + env(safe-area-inset-bottom));
   }
 
   main > div {

@@ -29,7 +29,7 @@ export function FocusLayoutShell({
 
   return (
     <>
-      <div className="relative z-10 min-h-screen lg:flex">
+      <div className="relative z-10 min-h-screen max-lg:flex max-lg:h-[100dvh] max-lg:min-h-[100dvh] max-lg:overflow-hidden lg:flex">
         <div
           className={`transition-all duration-300 ease-out ${
             hardFocusActive ? "pointer-events-none hidden opacity-0 lg:hidden" : "opacity-100"
@@ -37,7 +37,7 @@ export function FocusLayoutShell({
         >
           {sidebar}
         </div>
-        <div className="flex min-h-screen flex-1 flex-col">
+        <div className="flex min-h-screen flex-1 flex-col max-lg:h-full max-lg:min-h-0">
           <div
             className={`hidden transition-all duration-300 ease-out lg:block ${
               hardFocusActive ? "pointer-events-none h-0 overflow-hidden opacity-0" : "opacity-100"
@@ -46,7 +46,8 @@ export function FocusLayoutShell({
             {header}
           </div>
           <main
-            className={`relative flex-1 overflow-hidden px-2.5 pt-2.5 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:px-6 sm:pt-6 sm:pb-32 lg:px-8 lg:py-6 ${
+            data-app-scroll-container="true"
+            className={`relative flex-1 overflow-x-hidden overflow-y-auto px-2.5 pt-2.5 pb-[calc(6.5rem+env(safe-area-inset-bottom))] overscroll-contain [-webkit-overflow-scrolling:touch] max-lg:h-full max-lg:min-h-0 sm:px-6 sm:pt-6 sm:pb-32 lg:overflow-hidden lg:px-8 lg:py-6 ${
               hardFocusActive ? "pb-24 sm:pb-24" : ""
             }`}
           >
