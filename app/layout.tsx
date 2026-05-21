@@ -44,6 +44,12 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full bg-[#050607]" style={{ backgroundColor: "#050607" }}>
       <body className="min-h-screen bg-[#050607] text-white antialiased" style={{ backgroundColor: "#050607" }}>
+        <div className="system-startup-splash" aria-hidden="true">
+          <div className="system-startup-signal">
+            <span className="system-startup-dot" />
+            <span className="system-startup-label">Campus OS</span>
+          </div>
+        </div>
         <FocusProvider>
           <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
             <div className="absolute inset-0 system-background-field" />

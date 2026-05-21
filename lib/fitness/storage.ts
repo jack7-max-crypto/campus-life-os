@@ -30,6 +30,12 @@ export type FitnessWindowSummary = {
   averageProtein: number;
 };
 
+export type FitnessCalorieAverage = {
+  averageCalories: number;
+  loggedDays: number;
+  totalDays: number;
+};
+
 export type FitnessStreakKind = "calories" | "protein" | "workout";
 
 const FITNESS_STORAGE_KEY = "campus-life-os.fitness.v1";
@@ -149,9 +155,31 @@ function normalizeStoredState(value: unknown): FitnessState {
   }
 
   const parsed = value as Partial<FitnessState>;
+  const today = getLocalDateKey();
+  const dailyLogs = normalizeDailyLogs(parsed.dailyLogs);
+
+  const legacyCalories = normalizeNonNegativeNumber((parsed as { calories?: unknown }).calories);
+  const legacyProtein = normalizeNonNegativeNumber((parsed as { protein?: unknown }).protein);
+  const legacyWorkoutCompleted = Boolean((parsed as { workoutCompleted?: unknown }).workoutCompleted);
+  const legacyWeight = normalizeWeight((parsed as { weight?: unknown }).weight);
+  const hasLegacyDayValues =
+    legacyCalories > 0 ||
+    legacyProtein > 0 ||
+    legacyWorkoutCompleted ||
+    legacyWeight !== null;
+
+  if (hasLegacyDayValues && !dailyLogs[today]) {
+    dailyLogs[today] = {
+      date: today,
+      calories: legacyCalories,
+      protein: legacyProtein,
+      workoutCompleted: legacyWorkoutCompleted,
+      weight: legacyWeight,
+    };
+  }
 
   return {
-    dailyLogs: normalizeDailyLogs(parsed.dailyLogs),
+    dailyLogs,
     goals: normalizeGoals(parsed.goals),
   };
 }
@@ -301,6 +329,44 @@ export function getFitnessWindowSummary(
     proteinGoalHits: summary.proteinGoalHits,
     averageCalories: summary.totalCalories / totalDays,
     averageProtein: summary.totalProtein / totalDays,
+  };
+}
+
+export function getSevenDayCalorieAverage(state: FitnessState, referenceDate = new Date()): FitnessCalorieAverage {
+  const endOfWindow = new Date(referenceDate);
+  endOfWindow.setHours(12, 0, 0, 0);
+
+  let totalCalories = 0;
+  let loggedDays = 0;
+  const totalDays = 7;
+
+  for (let index = 0; index < totalDays; index += 1) {
+    const current = new Date(endOfWindow);
+    current.setDate(endOfWindow.getDate() - index);
+
+    const log = state.dailyLogs[getLocalDateKey(current)];
+    if (!log) {
+      continue;
+    }
+
+    const hasLoggedDay =
+      log.calories > 0 ||
+      log.protein > 0 ||
+      log.workoutCompleted ||
+      log.weight !== null;
+
+    if (!hasLoggedDay) {
+      continue;
+    }
+
+    totalCalories += log.calories;
+    loggedDays += 1;
+  }
+
+  return {
+    averageCalories: loggedDays > 0 ? totalCalories / loggedDays : 0,
+    loggedDays,
+    totalDays,
   };
 }
 

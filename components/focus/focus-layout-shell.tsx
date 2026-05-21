@@ -29,7 +29,7 @@ export function FocusLayoutShell({
 
   return (
     <>
-      <div className="relative z-10 min-h-screen max-lg:flex max-lg:h-[100dvh] max-lg:min-h-[100dvh] max-lg:overflow-hidden lg:flex">
+      <div className="system-shell-entry relative z-10 min-h-screen max-lg:flex max-lg:h-[100dvh] max-lg:min-h-[100dvh] max-lg:overflow-hidden lg:flex">
         <div
           className={`transition-all duration-300 ease-out ${
             hardFocusActive ? "pointer-events-none hidden opacity-0 lg:hidden" : "opacity-100"

@@ -22,6 +22,7 @@ import {
   getFitnessWindowSummary,
   getLatestWeight,
   getLocalDateKey,
+  getSevenDayCalorieAverage,
   getWeightTrendSummary,
   getWeeklyWorkoutCount,
   listFitnessLogs,
@@ -89,11 +90,37 @@ function formatDayLabel(dateKey: string, todayKey: string) {
     return "Today";
   }
 
+  if (dateKey === shiftDateKey(todayKey, -1)) {
+    return "Yesterday";
+  }
+
   return weekdayFormatter.format(new Date(`${dateKey}T12:00:00`));
+}
+
+function formatSelectedDateLabel(dateKey: string, todayKey: string) {
+  if (dateKey === todayKey) {
+    return "Today";
+  }
+
+  if (dateKey === shiftDateKey(todayKey, -1)) {
+    return "Yesterday";
+  }
+
+  return formatShortDate(dateKey);
 }
 
 function formatShortDate(dateKey: string) {
   return monthDayFormatter.format(new Date(`${dateKey}T12:00:00`));
+}
+
+function shiftDateKey(dateKey: string, days: number) {
+  const date = new Date(`${dateKey}T12:00:00`);
+  date.setDate(date.getDate() + days);
+  return getLocalDateKey(date);
+}
+
+function isShortlyAfterMidnight(date = new Date()) {
+  return date.getHours() < 3;
 }
 
 function formatNumber(value: number) {
@@ -365,6 +392,76 @@ function LatestWeightStrip({
   );
 }
 
+function FitnessDateSelector({
+  selectedDateKey,
+  todayKey,
+  afterMidnightHint,
+  onSelectDate,
+}: {
+  selectedDateKey: string;
+  todayKey: string;
+  afterMidnightHint: boolean;
+  onSelectDate: (dateKey: string) => void;
+}) {
+  const previousDateKey = shiftDateKey(selectedDateKey, -1);
+  const nextDateKey = shiftDateKey(selectedDateKey, 1);
+  const yesterdayKey = shiftDateKey(todayKey, -1);
+  const canGoNext = nextDateKey <= todayKey;
+
+  return (
+    <div className="system-panel system-card-shell min-w-0 overflow-hidden rounded-[14px] p-2.5 sm:p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="min-w-0">
+          <p className="system-label text-white/45">Log date</p>
+          <p className="mt-1 text-sm font-semibold text-white sm:text-base">
+            {formatSelectedDateLabel(selectedDateKey, todayKey)}
+            <span className="ml-2 font-mono text-[11px] font-medium text-white/38">
+              {formatShortDate(selectedDateKey)}
+            </span>
+          </p>
+        </div>
+
+        <div className="grid w-full min-w-0 basis-full grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-1.5 sm:flex sm:w-auto sm:basis-auto sm:justify-end">
+          <button
+            type="button"
+            aria-label="Previous day"
+            onClick={() => onSelectDate(previousDateKey)}
+            className="system-button-secondary inline-flex h-9 w-9 items-center justify-center rounded-[10px] p-0 text-sm font-bold"
+          >
+            &lt;
+          </button>
+          <button
+            type="button"
+            onClick={() => onSelectDate(todayKey)}
+            className="system-button-secondary min-h-9 justify-self-center rounded-[10px] px-2.5 py-1 text-xs font-semibold text-white/78"
+          >
+            Today
+          </button>
+          <button
+            type="button"
+            aria-label="Next day"
+            disabled={!canGoNext}
+            onClick={() => onSelectDate(nextDateKey)}
+            className="system-button-secondary inline-flex h-9 w-9 justify-self-end items-center justify-center rounded-[10px] p-0 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-35"
+          >
+            &gt;
+          </button>
+        </div>
+      </div>
+
+      {afterMidnightHint ? (
+        <button
+          type="button"
+          onClick={() => onSelectDate(yesterdayKey)}
+          className="mt-2 system-pill min-h-8 w-full px-3 py-1.5 text-left text-xs font-semibold text-white/72 sm:w-auto"
+        >
+          Update yesterday
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 function DailySnapshotCard({
   calories,
   caloriesGoal,
@@ -375,7 +472,10 @@ function DailySnapshotCard({
   workoutCompleted,
   weeklyWorkoutCount,
   weeklyWorkoutGoal,
+  weeklyAverageCalories,
+  weeklyAverageLoggedDays,
   hasHydrated,
+  selectedDateLabel,
   className = "",
 }: {
   calories: number;
@@ -387,9 +487,27 @@ function DailySnapshotCard({
   workoutCompleted: boolean;
   weeklyWorkoutCount: number;
   weeklyWorkoutGoal: number;
+  weeklyAverageCalories: number;
+  weeklyAverageLoggedDays: number;
   hasHydrated: boolean;
+  selectedDateLabel: string;
   className?: string;
 }) {
+  const averageDelta = weeklyAverageCalories - caloriesGoal;
+  const averageStatus =
+    weeklyAverageLoggedDays === 0
+      ? "No logged days yet"
+      : Math.abs(averageDelta) <= 150
+        ? "on target"
+        : averageDelta > 0
+          ? "above goal"
+          : "under goal";
+  const averageHelper =
+    weeklyAverageLoggedDays >= 7
+      ? `${averageStatus} vs goal`
+      : weeklyAverageLoggedDays > 0
+        ? `Avg from ${weeklyAverageLoggedDays} logged day${weeklyAverageLoggedDays === 1 ? "" : "s"}`
+        : "Log a day to start the average";
   const snapshotSummary = hasHydrated
     ? `${formatNumber(calories)} / ${formatNumber(caloriesGoal)} kcal · ${formatNumber(protein)} / ${formatNumber(proteinGoal)}g · ${
         workoutCompleted ? "Workout done" : "Workout pending"
@@ -414,12 +532,12 @@ function DailySnapshotCard({
       />
 
       <div className={summarySurfaceClassName}>
-        <span className="system-label text-white/45">Workout today</span>
+        <span className="system-label text-white/45">Workout {selectedDateLabel.toLowerCase()}</span>
         <p className="mt-2 text-xl font-semibold tracking-tight text-white sm:text-2xl">
           {hasHydrated ? (workoutCompleted ? "Done" : "Pending") : "--"}
         </p>
         <p className="mt-1 text-xs text-white/50 sm:text-sm">
-          {workoutCompleted ? "Training logged today" : "Training still open"}
+          {workoutCompleted ? "Training logged" : "Training still open"}
         </p>
         <p className="mt-2 text-xs text-white/35">
           {hasHydrated ? `${weeklyWorkoutCount}/${weeklyWorkoutGoal} workouts this week` : "Loading week"}
@@ -433,6 +551,16 @@ function DailySnapshotCard({
         </p>
         <p className="mt-1 text-xs text-white/50 sm:text-sm">
           Daily nutrition and weekly training targets
+        </p>
+      </div>
+
+      <div className={summarySurfaceClassName}>
+        <span className="system-label text-white/45">7-day avg</span>
+        <p className="mt-2 text-xl font-semibold tracking-tight text-white sm:text-2xl">
+          {hasHydrated ? `${formatNumber(weeklyAverageCalories)} kcal` : "--"}
+        </p>
+        <p className="mt-1 text-xs text-white/50 sm:text-sm">
+          {hasHydrated ? averageHelper : "Loading average"}
         </p>
       </div>
     </div>
@@ -596,23 +724,31 @@ function NumberEntryDialog({
   open,
   title,
   description,
+  selectedDateLabel,
   value,
   onValueChange,
   onClose,
   onSubmit,
   submitLabel,
   placeholder,
+  error,
+  calorieMode,
+  onCalorieModeChange,
   step = "1",
 }: {
   open: boolean;
   title: string;
   description: string;
+  selectedDateLabel: string;
   value: string;
   onValueChange: (value: string) => void;
   onClose: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   submitLabel: string;
   placeholder: string;
+  error?: string | null;
+  calorieMode?: "add" | "remove";
+  onCalorieModeChange?: (mode: "add" | "remove") => void;
   step?: string;
 }) {
   useScrollLock(open);
@@ -643,6 +779,9 @@ function NumberEntryDialog({
               {title}
             </h3>
             <p className="mt-1 text-sm text-white/50">{description}</p>
+            <p className="mt-2 inline-flex rounded-full border border-white/[0.08] bg-white/[0.035] px-2.5 py-1 font-mono text-[11px] font-semibold text-white/58">
+              {selectedDateLabel}
+            </p>
           </div>
           <button
             type="button"
@@ -654,6 +793,25 @@ function NumberEntryDialog({
         </div>
 
         <form className="space-y-4" onSubmit={onSubmit}>
+          {calorieMode && onCalorieModeChange ? (
+            <div className="grid grid-cols-2 gap-2 rounded-[12px] border border-white/[0.07] bg-black/35 p-1">
+              {(["add", "remove"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => onCalorieModeChange(mode)}
+                  className={`min-h-9 rounded-[9px] px-3 py-2 text-sm font-semibold transition-colors ${
+                    calorieMode === mode
+                      ? "system-selected-control"
+                      : "text-white/55 hover:bg-white/[0.045] hover:text-white/84"
+                  }`}
+                >
+                  {mode === "add" ? "Add" : "Remove"}
+                </button>
+              ))}
+            </div>
+          ) : null}
+
           <label className="block">
             <span className="system-label mb-2 block text-white/45">Amount</span>
             <input
@@ -665,8 +823,11 @@ function NumberEntryDialog({
               value={value}
               onChange={(event) => onValueChange(event.target.value)}
               placeholder={placeholder}
-              className="system-input px-4 py-3 text-base placeholder:text-white/25"
+              className={`system-input px-4 py-3 text-base placeholder:text-white/25 ${
+                error ? "border-[color-mix(in_srgb,var(--accent-danger)_45%,rgba(255,255,255,0.08))]" : ""
+              }`}
             />
+            {error ? <span className="mt-2 block text-xs font-medium text-[rgba(255,142,142,0.82)]">{error}</span> : null}
           </label>
 
           <div className="flex justify-end gap-3">
@@ -967,6 +1128,8 @@ export default function FitnessPage() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("today");
   const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null);
   const [draftValue, setDraftValue] = useState("");
+  const [draftError, setDraftError] = useState<string | null>(null);
+  const [calorieMode, setCalorieMode] = useState<"add" | "remove">("add");
   const [isGoalEditorOpen, setIsGoalEditorOpen] = useState(false);
   const [goalDraft, setGoalDraft] = useState<GoalDraft>(() =>
     createGoalDraft(createDefaultFitnessState().goals),
@@ -989,12 +1152,21 @@ export default function FitnessPage() {
   }, []);
 
   const todayKey = getLocalDateKey();
+  const [selectedDateKey, setSelectedDateKey] = useState(todayKey);
   const todayDate = useMemo(() => new Date(`${todayKey}T12:00:00`), [todayKey]);
+  const selectedDate = useMemo(() => new Date(`${selectedDateKey}T12:00:00`), [selectedDateKey]);
+  const selectedDateLabel = formatSelectedDateLabel(selectedDateKey, todayKey);
+  const selectedDateFullLabel = `${selectedDateLabel} (${formatShortDate(selectedDateKey)})`;
+  const showAfterMidnightHint = isShortlyAfterMidnight() && selectedDateKey === todayKey;
 
-  const todayLog = fitnessState.dailyLogs[todayKey] ?? createEmptyFitnessDayLog(todayKey);
+  const selectedLog = fitnessState.dailyLogs[selectedDateKey] ?? createEmptyFitnessDayLog(selectedDateKey);
   const latestWeight = useMemo(() => getLatestWeight(fitnessState), [fitnessState]);
-  const weeklyWorkoutCount = useMemo(() => getWeeklyWorkoutCount(fitnessState), [fitnessState]);
-  const weightTrendSummary = useMemo(() => getWeightTrendSummary(fitnessState), [fitnessState]);
+  const weeklyWorkoutCount = useMemo(() => getWeeklyWorkoutCount(fitnessState, selectedDate), [fitnessState, selectedDate]);
+  const weeklyCalorieAverage = useMemo(
+    () => getSevenDayCalorieAverage(fitnessState, selectedDate),
+    [fitnessState, selectedDate],
+  );
+  const weightTrendSummary = useMemo(() => getWeightTrendSummary(fitnessState, selectedDate), [fitnessState, selectedDate]);
   const recentLogs = useMemo(() => {
     const startDate = new Date(todayDate);
     startDate.setDate(todayDate.getDate() - 6);
@@ -1034,8 +1206,8 @@ export default function FitnessPage() {
   const hasEnoughWeightPointsForChart = weightTrendEntries.length >= 2;
   const currentMonthLabel = monthYearFormatter.format(todayDate);
 
-  const caloriesProgress = todayLog.calories / Math.max(fitnessState.goals.caloriesGoal, 1);
-  const proteinProgress = todayLog.protein / Math.max(fitnessState.goals.proteinGoal, 1);
+  const caloriesProgress = selectedLog.calories / Math.max(fitnessState.goals.caloriesGoal, 1);
+  const proteinProgress = selectedLog.protein / Math.max(fitnessState.goals.proteinGoal, 1);
 
   useEffect(() => {
     if (!goalsSaved) {
@@ -1048,6 +1220,8 @@ export default function FitnessPage() {
 
   const openDialog = (dialog: QuickAction) => {
     setDraftValue("");
+    setDraftError(null);
+    setCalorieMode("add");
     setActiveDialog(dialog);
   };
 
@@ -1069,6 +1243,8 @@ export default function FitnessPage() {
 
   const closeDialog = () => {
     setDraftValue("");
+    setDraftError(null);
+    setCalorieMode("add");
     setLiftDraft(createDefaultLiftDraft());
     setActiveDialog(null);
   };
@@ -1078,11 +1254,18 @@ export default function FitnessPage() {
 
     const parsedValue = Number(draftValue);
     if (!Number.isFinite(parsedValue) || parsedValue <= 0 || !activeDialog || activeDialog === "lift") {
+      setDraftError("Enter a positive amount.");
       return;
     }
 
-    updateFitnessState((currentState, resolvedTodayKey) => {
-      const currentLog = currentState.dailyLogs[resolvedTodayKey];
+    const roundedValue = activeDialog === "weight" ? parsedValue : Math.round(parsedValue);
+    if (activeDialog === "calories" && calorieMode === "remove" && roundedValue > selectedLog.calories) {
+      setDraftError("Calories cannot go below 0.");
+      return;
+    }
+
+    updateFitnessState((currentState) => {
+      const currentLog = currentState.dailyLogs[selectedDateKey] ?? createEmptyFitnessDayLog(selectedDateKey);
 
       switch (activeDialog) {
         case "calories":
@@ -1090,9 +1273,12 @@ export default function FitnessPage() {
             ...currentState,
             dailyLogs: {
               ...currentState.dailyLogs,
-              [resolvedTodayKey]: {
+              [selectedDateKey]: {
                 ...currentLog,
-                calories: currentLog.calories + parsedValue,
+                calories:
+                  calorieMode === "remove"
+                    ? Math.max(0, currentLog.calories - roundedValue)
+                    : currentLog.calories + roundedValue,
               },
             },
           };
@@ -1101,9 +1287,9 @@ export default function FitnessPage() {
             ...currentState,
             dailyLogs: {
               ...currentState.dailyLogs,
-              [resolvedTodayKey]: {
+              [selectedDateKey]: {
                 ...currentLog,
-                protein: currentLog.protein + parsedValue,
+                protein: currentLog.protein + roundedValue,
               },
             },
           };
@@ -1112,9 +1298,9 @@ export default function FitnessPage() {
             ...currentState,
             dailyLogs: {
               ...currentState.dailyLogs,
-              [resolvedTodayKey]: {
+              [selectedDateKey]: {
                 ...currentLog,
-                weight: parsedValue,
+                weight: roundedValue,
               },
             },
           };
@@ -1208,14 +1394,14 @@ export default function FitnessPage() {
   };
 
   const toggleWorkout = () => {
-    updateFitnessState((currentState, resolvedTodayKey) => {
-      const currentLog = currentState.dailyLogs[resolvedTodayKey];
+    updateFitnessState((currentState) => {
+      const currentLog = currentState.dailyLogs[selectedDateKey] ?? createEmptyFitnessDayLog(selectedDateKey);
 
       return {
         ...currentState,
         dailyLogs: {
           ...currentState.dailyLogs,
-          [resolvedTodayKey]: {
+          [selectedDateKey]: {
             ...currentLog,
             workoutCompleted: !currentLog.workoutCompleted,
           },
@@ -1234,27 +1420,33 @@ export default function FitnessPage() {
           : "";
   const dialogDescription =
     activeDialog === "calories"
-      ? "Add to today’s calorie total."
+      ? `${calorieMode === "remove" ? "Remove from" : "Add to"} ${selectedDateLabel.toLowerCase()}'s calorie total.`
       : activeDialog === "protein"
-        ? "Add to today’s protein total."
+        ? `Add to ${selectedDateLabel.toLowerCase()}'s protein total.`
         : activeDialog === "weight"
-          ? "Save your latest bodyweight for today."
+          ? `Save bodyweight for ${selectedDateLabel.toLowerCase()}.`
           : "";
   const dialogSubmitLabel =
-    activeDialog === "weight" ? "Save weight" : activeDialog === "protein" ? "Add protein" : "Add calories";
+    activeDialog === "weight"
+      ? "Save weight"
+      : activeDialog === "protein"
+        ? "Add protein"
+        : calorieMode === "remove"
+          ? "Remove calories"
+          : "Add calories";
   const dialogPlaceholder =
     activeDialog === "calories" ? "500" : activeDialog === "protein" ? "40" : "182.4";
   const dialogStep = activeDialog === "weight" ? "0.1" : "1";
   const quickActions: Array<{ type: QuickAction; label: string; detail: string }> = [
-    { type: "calories", label: "Add calories", detail: "Add to today" },
-    { type: "protein", label: "Add protein", detail: "Add grams" },
-    { type: "weight", label: "Log weight", detail: "Update weight" },
+    { type: "calories", label: "Add calories", detail: selectedDateLabel },
+    { type: "protein", label: "Add protein", detail: selectedDateLabel },
+    { type: "weight", label: "Log weight", detail: selectedDateLabel },
   ];
   const hasLiftEntries = liftEntries.length > 0;
   const isNumberDialogOpen = activeDialog !== null && activeDialog !== "lift";
   const weightTrendHelperText = hasEnoughWeightLogsForTrend
     ? null
-    : "Add today's weight to get started.";
+    : `Add ${selectedDateLabel.toLowerCase()}'s weight to get started.`;
 
   return (
     <>
@@ -1288,8 +1480,15 @@ export default function FitnessPage() {
 
         {activeTab === "today" ? (
           <>
+            <FitnessDateSelector
+              selectedDateKey={selectedDateKey}
+              todayKey={todayKey}
+              afterMidnightHint={showAfterMidnightHint}
+              onSelectDate={setSelectedDateKey}
+            />
+
             <section className="grid gap-2.5 md:grid-cols-[minmax(0,1.2fr)_minmax(16rem,0.8fr)] md:gap-4">
-              <Card title="Quick actions" subtitle="Log today first" variant="dark">
+              <Card title="Quick actions" subtitle={`Editing ${selectedDateLabel.toLowerCase()}`} variant="dark">
                 <div className="grid gap-1.5 sm:grid-cols-2 sm:gap-2">
                   {quickActions.map((action) => (
                     <QuickActionButton
@@ -1301,14 +1500,14 @@ export default function FitnessPage() {
                   ))}
                   <button
                     type="button"
-                    className={todayLog.workoutCompleted ? actionButtonClassName : primaryActionButtonClassName}
+                    className={selectedLog.workoutCompleted ? actionButtonClassName : primaryActionButtonClassName}
                     onClick={toggleWorkout}
                   >
                     <span className="block">
-                      {todayLog.workoutCompleted ? "Undo workout" : "Mark workout complete"}
+                      {selectedLog.workoutCompleted ? "Undo workout" : "Mark workout complete"}
                     </span>
-                    <span className={`mt-0.5 block text-[0.72rem] font-medium sm:mt-1 sm:text-xs ${todayLog.workoutCompleted ? "text-white/45" : "text-white/70"}`}>
-                      {todayLog.workoutCompleted ? "Clear today" : "Keep streak current"}
+                    <span className={`mt-0.5 block text-[0.72rem] font-medium sm:mt-1 sm:text-xs ${selectedLog.workoutCompleted ? "text-white/45" : "text-white/70"}`}>
+                      {selectedLog.workoutCompleted ? `Clear ${selectedDateLabel.toLowerCase()}` : `Log ${selectedDateLabel.toLowerCase()}`}
                     </span>
                   </button>
                 </div>
@@ -1324,25 +1523,32 @@ export default function FitnessPage() {
             </section>
 
             <DailySnapshotCard
-              calories={todayLog.calories}
+              calories={selectedLog.calories}
               caloriesGoal={fitnessState.goals.caloriesGoal}
               caloriesProgress={caloriesProgress}
-              protein={todayLog.protein}
+              protein={selectedLog.protein}
               proteinGoal={fitnessState.goals.proteinGoal}
               proteinProgress={proteinProgress}
-              workoutCompleted={todayLog.workoutCompleted}
+              workoutCompleted={selectedLog.workoutCompleted}
               weeklyWorkoutCount={weeklyWorkoutCount}
               weeklyWorkoutGoal={fitnessState.goals.weeklyWorkoutGoal}
+              weeklyAverageCalories={weeklyCalorieAverage.averageCalories}
+              weeklyAverageLoggedDays={weeklyCalorieAverage.loggedDays}
               hasHydrated={hasHydrated}
+              selectedDateLabel={selectedDateLabel}
             />
 
             <section>
               <Card title="Last 7 days" subtitle="Compact history preview" variant="dark">
                 <div className="space-y-1.5 sm:space-y-2">
                   {visibleRecentLogs.map(({ date, log }) => (
-                    <div
+                    <button
+                      type="button"
                       key={date}
-                      className="system-subtle-panel flex flex-col gap-1.5 rounded-[12px] px-2.5 py-2 sm:flex-row sm:items-center sm:justify-between sm:rounded-[18px] sm:px-4 sm:py-3"
+                      onClick={() => setSelectedDateKey(date)}
+                      className={`system-subtle-panel flex w-full flex-col gap-1.5 rounded-[12px] px-2.5 py-2 text-left transition-colors sm:flex-row sm:items-center sm:justify-between sm:rounded-[18px] sm:px-4 sm:py-3 ${
+                        selectedDateKey === date ? "ring-1 ring-white/[0.18]" : ""
+                      }`}
                     >
                       <div className="min-w-0">
                         <p className="text-[0.82rem] font-semibold text-white sm:text-sm">
@@ -1371,7 +1577,7 @@ export default function FitnessPage() {
                           {log.weight === null ? "No weight" : `${log.weight} lb`}
                         </span>
                       </div>
-                    </div>
+                    </button>
                   ))}
                 </div>
 
@@ -1737,12 +1943,19 @@ export default function FitnessPage() {
         open={isNumberDialogOpen}
         title={dialogTitle}
         description={dialogDescription}
+        selectedDateLabel={selectedDateFullLabel}
         value={draftValue}
-        onValueChange={setDraftValue}
+        onValueChange={(nextValue) => {
+          setDraftValue(nextValue);
+          setDraftError(null);
+        }}
         onClose={closeDialog}
         onSubmit={handleDialogSubmit}
         submitLabel={dialogSubmitLabel}
         placeholder={dialogPlaceholder}
+        error={draftError}
+        calorieMode={activeDialog === "calories" ? calorieMode : undefined}
+        onCalorieModeChange={activeDialog === "calories" ? setCalorieMode : undefined}
         step={dialogStep}
       />
       <LiftEntryDialog

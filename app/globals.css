@@ -5,6 +5,13 @@ html {
   scroll-behavior: smooth;
 }
 
+html,
+body,
+#root,
+#__next {
+  background-color: #050607;
+}
+
 :root {
   color-scheme: dark;
   --background: #050607;
@@ -71,6 +78,66 @@ html {
   }
 }
 
+@keyframes startupFade {
+  0%,
+  42% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+@keyframes startupSignal {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 6px, 0) scale(0.98);
+  }
+
+  34%,
+  70% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(0, -4px, 0) scale(0.995);
+  }
+}
+
+@keyframes startupDot {
+  0%,
+  100% {
+    opacity: 0.42;
+    transform: scale(0.9);
+  }
+
+  45% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+}
+
+@keyframes shellEntry {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0) scale(0.996);
+  }
+
+  52% {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0) scale(0.997);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
 @keyframes sectionEnter {
   from {
     opacity: 0;
@@ -128,6 +195,51 @@ html {
 
 .system-app-entry {
   animation: appEntry 420ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.system-shell-entry {
+  animation: shellEntry 620ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.system-startup-splash {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(ellipse at 50% 44%, rgba(210, 220, 240, 0.035), transparent 34%),
+    #050607;
+  animation: startupFade 660ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.system-startup-signal {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: rgba(245, 247, 250, 0.74);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  animation: startupSignal 620ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.system-startup-dot {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 999px;
+  background: rgba(245, 247, 250, 0.9);
+  box-shadow:
+    0 0 16px rgba(245, 247, 250, 0.16),
+    0 0 34px rgba(120, 150, 190, 0.08);
+  animation: startupDot 520ms ease-in-out forwards;
+}
+
+.system-startup-label {
+  text-shadow: 0 0 18px rgba(245, 247, 250, 0.08);
 }
 
 .animate-focusCompleteIn {
@@ -2280,6 +2392,10 @@ body::after {
 
   .animate-fadeIn,
   .system-app-entry,
+  .system-shell-entry,
+  .system-startup-splash,
+  .system-startup-signal,
+  .system-startup-dot,
   .animate-focusCompleteIn,
   .system-section-enter,
   .system-radial-light,
@@ -2321,5 +2437,9 @@ body::after {
 
   .system-next-action-scanline::before {
     animation: none;
+  }
+
+  .system-startup-splash {
+    display: none;
   }
 }
