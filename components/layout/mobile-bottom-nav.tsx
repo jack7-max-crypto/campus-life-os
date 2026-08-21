@@ -17,9 +17,9 @@ export function MobileBottomNav() {
   const mobileNavItems = navItems.filter((item) => item.href !== "/money");
 
   return (
-    <nav className="system-mobile-chrome fixed inset-x-0 bottom-0 z-50 w-full px-1 pt-1 pb-[env(safe-area-inset-bottom)] lg:hidden">
+    <nav className="system-mobile-chrome pointer-events-none fixed inset-x-0 bottom-0 z-50 w-full px-1 pt-1 pb-[env(safe-area-inset-bottom)] lg:hidden">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.12),rgba(190,194,204,0.045),transparent)]" />
-      <div className="relative mx-auto grid w-full max-w-[min(19rem,calc(100vw-0.65rem))] grid-cols-5 gap-0">
+      <div className="pointer-events-auto relative mx-auto grid w-full max-w-[min(19rem,calc(100vw-0.65rem))] grid-cols-5 gap-0">
         {mobileNavItems.map((item) => {
           const isActive = isCurrentPath(pathname, item.href);
           const Icon = item.icon;

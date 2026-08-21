@@ -27,6 +27,19 @@ type SyncResponsePayload = {
   error?: string;
 };
 
+async function fetchCanvasStatus() {
+  const response = await fetch("/api/canvas/status", {
+    method: "GET",
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error("Canvas status could not be loaded.");
+  }
+
+  return (await response.json()) as CanvasStatusResponse;
+}
+
 function formatTimestamp(value: string | null) {
   if (!value) {
     return "Not synced yet";
@@ -74,6 +87,7 @@ export function CanvasSyncCard() {
   const { snapshot, hasHydrated } = useCanvasImportSnapshot();
   const [status, setStatus] = useState<CanvasStatusResponse | null>(null);
   const [isLoadingStatus, setIsLoadingStatus] = useState(true);
+  const [statusLoadError, setStatusLoadError] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -89,20 +103,19 @@ export function CanvasSyncCard() {
 
     async function loadStatus() {
       setIsLoadingStatus(true);
+      setStatusLoadError(null);
 
       try {
-        const response = await fetch("/api/canvas/status", {
-          method: "GET",
-          cache: "no-store",
-        });
-        const payload = (await response.json()) as CanvasStatusResponse;
+        const payload = await fetchCanvasStatus();
 
         if (!isCancelled) {
           setStatus(payload);
         }
-      } catch {
+      } catch (error) {
         if (!isCancelled) {
-          setErrorMessage("Canvas status could not be loaded.");
+          setStatusLoadError(
+            error instanceof Error ? error.message : "Canvas status could not be loaded.",
+          );
         }
       } finally {
         if (!isCancelled) {
@@ -140,12 +153,15 @@ export function CanvasSyncCard() {
       persistCanvasSyncResult(payload.result);
       setNotice("Canvas data synced into the isolated import store.");
 
-      const statusResponse = await fetch("/api/canvas/status", {
-        method: "GET",
-        cache: "no-store",
-      });
-      const statusPayload = (await statusResponse.json()) as CanvasStatusResponse;
-      setStatus(statusPayload);
+      try {
+        const statusPayload = await fetchCanvasStatus();
+        setStatus(statusPayload);
+        setStatusLoadError(null);
+      } catch (error) {
+        setStatusLoadError(
+          error instanceof Error ? error.message : "Canvas status could not be loaded.",
+        );
+      }
     } catch {
       const message = "Canvas sync failed.";
       setCanvasImportError(message);
@@ -166,12 +182,9 @@ export function CanvasSyncCard() {
       clearCanvasImportSnapshot();
       setNotice("Canvas OAuth tokens were cleared. Imported Canvas data was removed locally.");
 
-      const response = await fetch("/api/canvas/status", {
-        method: "GET",
-        cache: "no-store",
-      });
-      const payload = (await response.json()) as CanvasStatusResponse;
+      const payload = await fetchCanvasStatus();
       setStatus(payload);
+      setStatusLoadError(null);
     } catch {
       setErrorMessage("Canvas disconnect failed.");
     }
@@ -179,13 +192,15 @@ export function CanvasSyncCard() {
 
   const statusLabel = isLoadingStatus
     ? "Checking"
-    : status?.mode === "oauth" && status.isConnected
-      ? "Connected"
-      : status?.mode === "dev-token"
-        ? "Dev token"
-        : status?.oauthConfigured
-          ? "Setup ready"
-          : "Setup required";
+    : statusLoadError
+      ? "Status unavailable"
+      : status?.mode === "oauth" && status.isConnected
+        ? "Connected"
+        : status?.mode === "dev-token"
+          ? "Dev token"
+          : status?.oauthConfigured
+            ? "Setup ready"
+            : "Setup required";
 
   const lastSyncedLabel = hasHydrated ? formatTimestamp(snapshot.lastSyncedAt) : "Loading";
 
@@ -245,7 +260,7 @@ export function CanvasSyncCard() {
           <button
             type="button"
             onClick={() => void handleSync()}
-            disabled={!status?.canSync || isSyncing}
+            disabled={isSyncing}
             className={status?.oauthConfigured && status.mode !== "oauth" ? secondaryButtonClassName : primaryButtonClassName}
           >
             {isSyncing ? "Syncing..." : "Sync now"}
@@ -278,7 +293,17 @@ export function CanvasSyncCard() {
           </p>
         </div>
 
-        {!status?.isConfigured ? (
+        {statusLoadError ? (
+          <div className={noteClassName}>
+            <p className="font-medium text-white">Status unavailable</p>
+            <p className="mt-1 text-white/65">
+              Canvas status could not be loaded. You can still try syncing; the server will
+              report whether Canvas is configured.
+            </p>
+          </div>
+        ) : null}
+
+        {status && !status.isConfigured ? (
           <div className={noteClassName}>
             <p className="font-medium text-white">Setup required</p>
             <p className="mt-1 text-white/65">

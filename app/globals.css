@@ -2138,7 +2138,7 @@ body::after {
   width: 100%;
   min-height: calc(3.35rem + env(safe-area-inset-bottom));
   isolation: isolate;
-  pointer-events: auto;
+  pointer-events: none;
   border-top: 1px solid rgba(180, 190, 210, 0.11);
   background:
     radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.04), transparent 54%),

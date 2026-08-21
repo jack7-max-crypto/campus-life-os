@@ -38,7 +38,7 @@ export function FocusModeBar() {
 
   return (
     <BodyPortal>
-      <div className="fixed inset-0 z-[90] bg-black/42 backdrop-blur-[2px] sm:hidden" />
+      <div className="pointer-events-none fixed inset-0 z-[90] bg-black/42 backdrop-blur-[2px] sm:hidden" />
       <aside className="pointer-events-none fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+4.1rem)] z-[100] sm:inset-x-auto sm:right-6 sm:bottom-6 sm:w-[25rem]">
       <div
         data-scroll-lock-scrollable="true"
